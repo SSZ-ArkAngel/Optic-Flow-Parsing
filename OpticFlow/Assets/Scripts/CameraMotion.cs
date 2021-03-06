@@ -18,6 +18,6 @@ public class CameraMotion : MonoBehaviour
     {
         Vector3 velocity = new Vector3(0.0f, 0.0f, egoVelocity);
         Vector3 displacement = Time.deltaTime * velocity; // accounts for frame rates to make sure the object moves at the speed defined
-        transform.localPosition = transform.localPosition + displacement;
+        transform.localPosition += displacement;
     }
 }
