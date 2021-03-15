@@ -6,6 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/MasterController.unity
+    guid: d1b8829d61976b9499baf2e04a8aa944
+  - enabled: 1
+    path: Assets/Scenes/Walkthrough.unity
+    guid: 4fe410d7a2ee887469f3ef8b92dd6118
+  - enabled: 1
     path: Assets/Scenes/Fixation.unity
     guid: b67fbc297230c274c9c287988e505524
   - enabled: 1

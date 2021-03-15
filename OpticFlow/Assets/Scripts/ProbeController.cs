@@ -31,14 +31,14 @@ public class ProbeController : MonoBehaviour
         // It will pass through the center halfway through it's journey, which is 2 seconds long
         // the velocity is per second, therefore velocity * sine or cosine must be added to the probes offset
 
-        if(randomSpawn == 0) // Spawn at top
+        if(tutorialStep == 1 || tutorialStep == 3 || tutorialStep == 5 || tutorialStep == 7) // Spawn at top
         {
             probePosition.x = 0f - probeXVelocity;
             probePosition.y = 0.7f - probeYVelocity; // Top
             probePosition.z = 2.001f; // Near Plane
         }
 
-        if(randomSpawn == 1) // Spawn at bottom
+        if(tutorialStep == 2 || tutorialStep == 4 || tutorialStep == 6 || tutorialStep == 8) // Spawn at bottom
         {
             probePosition.x = 0f - probeXVelocity;
             probePosition.y = -0.7f - probeYVelocity; // Bottom
@@ -55,7 +55,8 @@ public class ProbeController : MonoBehaviour
 
     void SetProbeVelocity() // Full 360° motion, with a higher distribution within a bowtie
     {
-        probeAngleDistribution = Random.Range(0, 3);
+        //probeAngleDistribution = Random.Range(0, 3);
+        probeAngleDistribution = 1;
 
         if(probeAngleDistribution <= 1) // 2/3 trials are within +/-
         {
@@ -73,10 +74,15 @@ public class ProbeController : MonoBehaviour
 
     }
 
-    
+    int tutorialStep;
+    GameObject theOverlord;
+
     // Start is called before the first frame update
     void Start()
     {
+        theOverlord = GameObject.Find("TheOverlord");
+        tutorialStep = theOverlord.GetComponent<Overlord>().tutorialStep;
+        
         SetProbeVelocity(); // Velocity must be set before position, as position depends on the velocity
         SetprobePosition();
         

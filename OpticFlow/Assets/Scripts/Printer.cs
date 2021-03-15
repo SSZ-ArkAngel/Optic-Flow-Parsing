@@ -68,25 +68,31 @@ public class Printer : MonoBehaviour
 
     }
     
+    int tutorialStep;
+    GameObject theOverlord;
+
     // Start is called before the first frame update
     void Start()
     {
+        theOverlord = GameObject.Find("TheOverlord");
+        tutorialStep = theOverlord.GetComponent<Overlord>().tutorialStep;
+        
         int condition = Random.Range(0, 4); // Create a RNG to choose between 0, 1, and 2. 0 = full, 1 = top, 2 = bottom
 
             // Conditional branch to choose which generator to use
-            if(condition == 0)
+            if(tutorialStep == 1 || tutorialStep == 2)
             {
                 FullConditionGenerator();
             }
-            if(condition == 1)
+            if(tutorialStep == 3 || tutorialStep == 6)
             {
                 TopConditionGenerator();
             }
-            if(condition == 2)
+            if(tutorialStep == 4 || tutorialStep == 5)
             {
                 BottomConditionGenerator();
             }
-            if(condition == 3)
+            if(tutorialStep == 7 || tutorialStep == 8)
             {
                 ControlConditionGenerator();
             }
