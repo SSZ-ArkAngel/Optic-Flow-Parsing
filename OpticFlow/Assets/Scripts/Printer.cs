@@ -8,7 +8,7 @@ public class Printer : MonoBehaviour
     public Transform opticFlow; // Allows us to define what prefab is used for optic flow
     Vector3 flowPosition; // Used to initialize a random position for each optic flow particle
 
-    int particleDensity = 2000; // Defines number of ideal number of flow particles
+    int particleDensity = 3000; // Defines number of ideal number of flow particles
     int actualDensity; // Actual number of flow particles used
 
     void FullConditionGenerator() // Generates full condition
