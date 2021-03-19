@@ -10,6 +10,7 @@ public class Printer : MonoBehaviour
 
     int particleDensity = 3000; // Defines number of ideal number of flow particles
     int actualDensity; // Actual number of flow particles used
+    public GameObject overlord;
 
     void FullConditionGenerator() // Generates full condition
     {
@@ -71,7 +72,10 @@ public class Printer : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+
+        overlord = GameObject.Find("Overlord");
         int condition = Random.Range(0, 4); // Create a RNG to choose between 0, 1, and 2. 0 = full, 1 = top, 2 = bottom
+        overlord.GetComponent<MasterController>().conditionKey = condition;
 
             // Conditional branch to choose which generator to use
             if(condition == 0)

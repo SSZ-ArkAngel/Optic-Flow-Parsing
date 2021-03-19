@@ -17,7 +17,7 @@ public class SceneSwitcher : MonoBehaviour
         StartCoroutine(LoadAfterLevelDelay(delay));
     }
 
-    void Stimulus2Fixation()
+    void Stimulus2Dial()
     {
         delay = 2f;
         StartCoroutine(LoadAfterLevelDelay(delay));
@@ -32,7 +32,7 @@ public class SceneSwitcher : MonoBehaviour
 
         if(SceneManager.GetActiveScene().buildIndex == 2)
         {
-            Stimulus2Fixation();
+            Stimulus2Dial();
         }
     }
 
@@ -53,7 +53,7 @@ public class SceneSwitcher : MonoBehaviour
         if(SceneManager.GetActiveScene().buildIndex == 2)
         {
             yield return new WaitForSeconds(delay); // Starts a one second timer
-            SceneManager.LoadScene(1); // Executes after one second timer
+            SceneManager.LoadScene(3); // Executes after one second timer
         }
         
     }

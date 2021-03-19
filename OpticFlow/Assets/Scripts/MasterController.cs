@@ -6,19 +6,32 @@ using UnityEngine.SceneManagement;
 public class MasterController : MonoBehaviour
 {
     
-    public int counterSector1 = 0;
-    public int counterSector2 = 0;
-    public int counterSector3 = 0;
-    public int counterSector4 = 0;
-    public int counterSector5 = 0;
-    public int counterSector6 = 0;
-    public int counterSector7 = 0;
-    public int counterSector8 = 0;
-    public int counterSector9 = 0;
-    public int counterSector0 = 0;
+
+    public int[,,] sectorCounter = new int[4,2,10]; // When initializing the conditions set these variables
+    public int conditionKey;
+    public int probeKey;
+    public int sectorKey;
+
+    void InitializeSectorCounter()
+    {
+        for(int i = 0; i < 4; i++)
+        {
+            for(int j = 0; j < 2; j++)
+            {
+                for(int k = 0; k < 10; k++)
+                {
+                    sectorCounter[i,j,k] = 0;
+                }
+            }
+        }
+    }
+
+
+
     void Awake() // Awake is called when the object is created
     {
         DontDestroyOnLoad(gameObject);
+        //InitializeSectorCounter();
     }
 
     // Start is called before the first frame update
@@ -33,5 +46,10 @@ public class MasterController : MonoBehaviour
     void Update()
     {
         
+    }
+
+    void Writer() // Save data as csv
+    {
+
     }
 }

@@ -17,11 +17,16 @@ public class ProbeController : MonoBehaviour
     GameObject mainCamera;
     GameObject overlord; // Lowercase is in the script, Uppercase
     int maximumSectorCount = 10; //
+    public int randomSector;
+    public int conditionKey;
+    public int probeKey;
+    public int sectorKey;
 
     void SetprobePosition() // Either at top or bottom
     {
         // Spawn at X = 0, Z = 2.001, Y = ±0.7
         int randomSpawn = Random.Range(0, 2);
+        overlord.GetComponent<MasterController>().probeKey = randomSpawn;
 
         if(randomSpawn == 0) // Spawn at top
         {
@@ -35,161 +40,104 @@ public class ProbeController : MonoBehaviour
             probePosition.x = 0f - probeXVelocity;
             probePosition.y = -0.7f - probeYVelocity; // Bottom
             probePosition.z = 2.001f; // Near Plane
+
+        }
+    }
+
+    void SectorSelector()
+    {
+        randomSector = Random.Range(0,10);
+        overlord.GetComponent<MasterController>().sectorKey = randomSector;
+        if(overlord.GetComponent<MasterController>().sectorCounter[conditionKey, probeKey, sectorKey] <= maximumSectorCount)
+        {
+            SetProbeVelocity();
+        }
+        if(overlord.GetComponent<MasterController>().sectorCounter[conditionKey, probeKey, sectorKey] > maximumSectorCount)
+        {
+            SectorSelector();
         }
     }
 
     void SetProbeVelocity() // Full 360° motion 
     {
-        // float probeAngle = Random.Range (0f, 2*Mathf.PI); // Returns random value in degrees
-        // probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-        // probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-
-        int randomSector = Random.Range(0, 10); // Check to see if counter <= value, increment after doing stuff
+        if(randomSector == 0)
+        {
+            SetSectorAngle(0f, 0.2f);
+        }
 
         if(randomSector == 1)
         {
-            if(overlord.GetComponent<MasterController>().counterSector1 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (0f, 0.2f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-            overlord.GetComponent<MasterController>().counterSector1++;
-
+            SetSectorAngle(0.2f, 0.4f);
         }
+
         if(randomSector == 2)
         {
-            if(overlord.GetComponent<MasterController>().counterSector2 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (0.2f*Mathf.PI, 0.4f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-            overlord.GetComponent<MasterController>().counterSector2++;            
+            SetSectorAngle(0.4f, 0.6f);
         }
         if(randomSector == 3)
         {
-            if(overlord.GetComponent<MasterController>().counterSector3 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (0.4f*Mathf.PI, 0.6f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-            overlord.GetComponent<MasterController>().counterSector3++;                        
-        }
+            SetSectorAngle(0.6f, 0.8f);
+        } 
         if(randomSector == 4)
         {
-            if(overlord.GetComponent<MasterController>().counterSector4 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (0.6f*Mathf.PI, 0.8f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;  
-            overlord.GetComponent<MasterController>().counterSector4++;                      
+            SetSectorAngle(0.8f, 1.0f);
         }
+
         if(randomSector == 5)
         {
-            if(overlord.GetComponent<MasterController>().counterSector5 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (0.8f*Mathf.PI, 1.0f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-            overlord.GetComponent<MasterController>().counterSector5++;                        
+            SetSectorAngle(1.0f, 1.2f);
         }
+
         if(randomSector == 6)
         {
-            if(overlord.GetComponent<MasterController>().counterSector6 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (1.0f*Mathf.PI, 1.2f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-            overlord.GetComponent<MasterController>().counterSector6++;                        
+            SetSectorAngle(1.2f, 1.4f);
         }
+
         if(randomSector == 7)
         {
-            if(overlord.GetComponent<MasterController>().counterSector7 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (1.2f*Mathf.PI, 1.4f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-            overlord.GetComponent<MasterController>().counterSector7++;            
+            SetSectorAngle(1.4f, 1.6f);
         }
+
         if(randomSector == 8)
         {
-            if(overlord.GetComponent<MasterController>().counterSector8 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (1.4f*Mathf.PI, 1.6f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-            overlord.GetComponent<MasterController>().counterSector8++;            
+            SetSectorAngle(1.6f, 1.8f);
         }
+
         if(randomSector == 9)
         {
-            if(overlord.GetComponent<MasterController>().counterSector9 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (1.6f*Mathf.PI, 1.8f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity; 
-            overlord.GetComponent<MasterController>().counterSector9++;           
-        }
-        if(randomSector == 0)
-        {
-            if(overlord.GetComponent<MasterController>().counterSector0 > maximumSectorCount)
-            {
-                SetProbeVelocity();
-            }
-            float probeAngle = Random.Range (1.8f*Mathf.PI, 2f*Mathf.PI); // Returns random value in degrees
-            probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-            probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
-            overlord.GetComponent<MasterController>().counterSector0++;            
-        }
-        // If everything hit, then quit.
-        if(overlord.GetComponent<MasterController>().counterSector1 > maximumSectorCount 
-        && overlord.GetComponent<MasterController>().counterSector2 > maximumSectorCount
-        && overlord.GetComponent<MasterController>().counterSector3 > maximumSectorCount
-        && overlord.GetComponent<MasterController>().counterSector4 > maximumSectorCount
-        && overlord.GetComponent<MasterController>().counterSector5 > maximumSectorCount
-        && overlord.GetComponent<MasterController>().counterSector6 > maximumSectorCount
-        && overlord.GetComponent<MasterController>().counterSector7 > maximumSectorCount
-        && overlord.GetComponent<MasterController>().counterSector8 > maximumSectorCount
-        && overlord.GetComponent<MasterController>().counterSector9 > maximumSectorCount 
-        && overlord.GetComponent<MasterController>().counterSector0 > maximumSectorCount)
-        {
-            Application.Quit(); // Quits
-        }
-        
-
+            SetSectorAngle(1.8f, 1.2f);
+        }      
     }
 
-    void AngleAssigner(float lowerAngle, float UpperAngle)
+    void SetSectorAngle(float minimumAngle, float maximumAngle)
     {
-        float probeAngle = Random.Range (lowerAngle*Mathf.PI, UpperAngle*Mathf.PI); // Returns random value in degrees
+        float probeAngle = Random.Range(minimumAngle*Mathf.PI, maximumAngle*Mathf.PI);
         probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
         probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
     }
+
+    // void AngleAssigner(float lowerAngle, float UpperAngle)
+    // {
+    //     float probeAngle = Random.Range (lowerAngle*Mathf.PI, UpperAngle*Mathf.PI); // Returns random value in degrees
+    //     probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
+    //     probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
+    // }
     
     // Start is called before the first frame update
     void Start()
     {
         // ABOUT TO CALL THE COUNTERS!!!!!!!!!
         overlord = GameObject.Find("Overlord");
-        
-        SetProbeVelocity();
+        conditionKey = overlord.GetComponent<MasterController>().conditionKey;
+        probeKey = overlord.GetComponent<MasterController>().probeKey;
+        sectorKey = overlord.GetComponent<MasterController>().sectorKey;
+
+
+        SectorSelector();
         SetprobePosition();
+        
+        // SetProbeVelocity();
+        // SetprobePosition();
         // SetProbeVelocity();
 
         Transform probe = Instantiate(opticProbe);
