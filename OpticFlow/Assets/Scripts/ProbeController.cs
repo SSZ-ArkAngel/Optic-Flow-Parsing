@@ -16,7 +16,7 @@ public class ProbeController : MonoBehaviour
     GameObject probeGameObject;
     GameObject mainCamera;
     GameObject overlord; // Lowercase is in the script, Uppercase
-    int maximumSectorCount = 10; //
+    int maximumSectorCount = 6; //
     public int randomSector;
     public int conditionKey;
     public int probeKey;
@@ -111,7 +111,7 @@ public class ProbeController : MonoBehaviour
 
     void SetSectorAngle(float minimumAngle, float maximumAngle)
     {
-        float probeAngle = Random.Range(minimumAngle*2*Mathf.PI, maximumAngle*2*Mathf.PI);
+        float probeAngle = Random.Range(minimumAngle*Mathf.PI, maximumAngle*Mathf.PI);
         probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
         probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
         overlord.GetComponent<MasterController>().probeAngle = probeAngle;

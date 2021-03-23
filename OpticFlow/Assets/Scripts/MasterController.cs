@@ -17,6 +17,8 @@ public class MasterController : MonoBehaviour
     public float probeAngle; // Set in ProbeController
     public int trialNumber; // Set in MasterController
 
+    public float experimentTimer = 0;
+
     void InitializeSectorCounter()
     {
         for(int i = 0; i < 4; i++)
@@ -51,7 +53,7 @@ public class MasterController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        experimentTimer += Time.deltaTime;
     }
 
     int varCount = 6;
