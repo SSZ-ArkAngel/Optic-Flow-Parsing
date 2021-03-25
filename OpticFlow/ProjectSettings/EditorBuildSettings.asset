@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/DialSelector.unity
     guid: 33dd4a87f56dbc847b3fe1f9679ab717
+  - enabled: 1
+    path: Assets/Scenes/Break.unity
+    guid: 518f2cffb2e1fab41867a2a23c470185
   m_configObjects: {}

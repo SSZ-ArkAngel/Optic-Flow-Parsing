@@ -10,6 +10,7 @@ public class DialRotator : MonoBehaviour
     public GameObject overlord;
     float timeOnDial = 0;
     float dialRotation;
+    bool takeABreak;
 
     void ConvertDialRotationToDegrees()
     {
@@ -44,7 +45,7 @@ public class DialRotator : MonoBehaviour
         }
 
         //if(Input.GetKey(KeyCode.Return))
-        if(timeOnDial >= 6.0f)
+        if(timeOnDial >= 6.0f || Input.GetKey(KeyCode.Return))
         {
             ConvertDialRotationToDegrees();
             //Vector3 paddleRotationTransform = transform.localRotation.eulerAngles;
@@ -52,7 +53,18 @@ public class DialRotator : MonoBehaviour
             overlord.GetComponent<MasterController>().absoluteTilt = dialRotation;
             //Collect the data aka tilt
             overlord.GetComponent<MasterController>().VolatileWriter();
-            SceneManager.LoadScene(1);
+            SceneManager.LoadScene(4); // Loads blank screen
+        }
+
+        // if(Input.GetKey(KeyCode.Space))
+        // {
+        //     SceneManager.LoadScene(1);
+        // }
+
+        // Quit if escape is hit
+        if(Input.GetKey(KeyCode.Escape))
+        {
+            Application.Quit();
         }
      
     }
