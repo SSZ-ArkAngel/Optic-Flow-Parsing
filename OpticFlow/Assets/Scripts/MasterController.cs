@@ -18,6 +18,7 @@ public class MasterController : MonoBehaviour
     public int trialNumber; // Set in MasterController
 
     public float experimentTimer = 0;
+    public float reactionTime;
 
     void InitializeSectorCounter()
     {
@@ -57,7 +58,7 @@ public class MasterController : MonoBehaviour
     }
 
     int varCount = 6;
-    string[] volatileData = new string[6];
+    string[] volatileData = new string[7];
 
     void InitializeData() // Creates the header for the CSV file
     {
@@ -67,6 +68,7 @@ public class MasterController : MonoBehaviour
         volatileData[3] = "Sector Index";
         volatileData[4] = "Absolute Tilt";
         volatileData[5] = "Probe Angle";
+        volatileData[6] = "Reaction Time";
     }
 
     void WriteHeader() // Save header data as csv and create file
@@ -96,6 +98,7 @@ public class MasterController : MonoBehaviour
         volatileData[3] = ""+sectorKey;
         volatileData[4] = ""+absoluteTilt;
         volatileData[5] = ""+probeAngle;
+        volatileData[6] = ""+reactionTime;
         
         using (StreamWriter sw = File.AppendText(Application.dataPath + "SubjectData.csv")) // Uses the Streamwriter to write stuff
         {

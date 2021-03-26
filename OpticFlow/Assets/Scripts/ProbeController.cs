@@ -112,8 +112,8 @@ public class ProbeController : MonoBehaviour
     void SetSectorAngle(float minimumAngle, float maximumAngle)
     {
         float probeAngle = Random.Range(minimumAngle*Mathf.PI, maximumAngle*Mathf.PI);
-        probeXVelocity = Mathf.Cos(probeAngle)*probeVelocity;
-        probeYVelocity = Mathf.Sin(probeAngle)*probeVelocity;
+        probeXVelocity = Mathf.Sin(probeAngle)*probeVelocity;
+        probeYVelocity = Mathf.Cos(probeAngle)*probeVelocity;
         overlord.GetComponent<MasterController>().probeAngle = probeAngle;
     }
 
