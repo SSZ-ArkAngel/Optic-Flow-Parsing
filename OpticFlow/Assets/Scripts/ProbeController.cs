@@ -16,7 +16,7 @@ public class ProbeController : MonoBehaviour
     GameObject probeGameObject;
     GameObject mainCamera;
     GameObject overlord; // Lowercase is in the script, Uppercase
-    int maximumSectorCount = 6; //
+    int maximumSectorCount = 10; //
     public int randomSector;
     public int conditionKey;
     public int probeKey;

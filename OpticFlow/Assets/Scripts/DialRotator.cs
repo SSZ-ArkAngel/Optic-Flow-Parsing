@@ -17,6 +17,7 @@ public class DialRotator : MonoBehaviour
     public int sectorKey;
 
     bool enterPressed;
+    float delay = 0.5f;
     void ConvertDialRotationToDegrees()
     {
         if(dialRotation < 0)
@@ -40,15 +41,19 @@ public class DialRotator : MonoBehaviour
 
         overlord = GameObject.Find("Overlord");
 
-        if(overlord.GetComponent<MasterController>().probeKey == 0) // Spawn at top
-        {
-            transform.localPosition = new Vector3 (0f, 2.8f, 0f);
-        }
+        transform.localPosition = new Vector3 (0f, 0f, 0f);
+        float randomAngle = Random.Range(-180f, 180f);
+        transform.eulerAngles = new Vector3(0f, 0f, randomAngle);
 
-        if(overlord.GetComponent<MasterController>().probeKey == 1) // Spawn at bottom
-        {
-            transform.localPosition = new Vector3 (0f, -2.8f, 0f);
-        }
+        // if(overlord.GetComponent<MasterController>().probeKey == 0) // Spawn at top
+        // {
+        //     transform.localPosition = new Vector3 (0f, 2.8f, 0f);
+        // }
+
+        // if(overlord.GetComponent<MasterController>().probeKey == 1) // Spawn at bottom
+        // {
+        //     transform.localPosition = new Vector3 (0f, -2.8f, 0f);
+        // }
 
         conditionKey = overlord.GetComponent<MasterController>().conditionKey;
         probeKey = overlord.GetComponent<MasterController>().probeKey;
@@ -76,12 +81,12 @@ public class DialRotator : MonoBehaviour
         }
 
         //if(Input.GetKey(KeyCode.Return))
-        if(timeOnDial >= 6.0f || Input.GetKey(KeyCode.KeypadMinus))
-        {
-            //Vector3 paddleRotationTransform = transform.localRotation.eulerAngles;
-            //overlord.GetComponent<MasterController>().absoluteTilt = paddleRotationTransform.z;
-            SceneManager.LoadScene(4); // Loads blank screen
-        }
+        // if(timeOnDial >= 6.0f || Input.GetKey(KeyCode.KeypadMinus))
+        // {
+        //     //Vector3 paddleRotationTransform = transform.localRotation.eulerAngles;
+        //     //overlord.GetComponent<MasterController>().absoluteTilt = paddleRotationTransform.z;
+        //     SceneManager.LoadScene(4); // Loads blank screen
+        // }
 
         if(Input.GetKeyDown(KeyCode.Return) && !enterPressed)
         {
@@ -95,6 +100,8 @@ public class DialRotator : MonoBehaviour
             //Collect the data aka tilt
             overlord.GetComponent<MasterController>().reactionTime = timeOnDial;
             overlord.GetComponent<MasterController>().VolatileWriter();
+            SceneManager.LoadScene(1);
+            //LoadAfterLevelDelay(delay);
         }
 
         // if(Input.GetKey(KeyCode.Space))
@@ -106,7 +113,11 @@ public class DialRotator : MonoBehaviour
         if(Input.GetKey(KeyCode.Escape))
         {
             Application.Quit();
-        }
-     
+        }   
+    }
+    IEnumerator LoadAfterLevelDelay (float delay)
+    {
+        yield return new WaitForSeconds(delay); // Starts a timer
+        SceneManager.LoadScene(1); // Executes after timer     
     }
 }

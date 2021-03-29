@@ -155,6 +155,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   opticFlow: {fileID: 2553932755250688927, guid: cdf543b1a2197524fb822c56db996729, type: 3}
+  overlord: {fileID: 0}
 --- !u!4 &494204126
 Transform:
   m_ObjectHideFlags: 0
@@ -183,6 +184,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   opticProbe: {fileID: 2021110290626118120, guid: ddf497684582e3b469ac2ef6ba0e71e0, type: 3}
   probeVelocity: 0.1
+  randomSector: 0
+  conditionKey: 0
+  probeKey: 0
+  sectorKey: 0
 --- !u!114 &494204128
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -492,7 +497,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3659466777318966776, guid: 18ce4f40aeb3c69428bf5bf1f07d19e9, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 60
+      value: 53
       objectReference: {fileID: 0}
     - target: {fileID: 3659466777318966776, guid: 18ce4f40aeb3c69428bf5bf1f07d19e9, type: 3}
       propertyPath: m_LocalPosition.x

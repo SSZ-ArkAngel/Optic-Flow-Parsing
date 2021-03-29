@@ -13,7 +13,7 @@ public class SceneSwitcher : MonoBehaviour
     void Fixation2Stimulus() // Switches from Fixation to Stimulus
     {
         // Wait for 1 second, then switch to the stimulus
-        delay = 1f;
+        delay = 0.3f;
         StartCoroutine(LoadAfterLevelDelay(delay));
     }
 
