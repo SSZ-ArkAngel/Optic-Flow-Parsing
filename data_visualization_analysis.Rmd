@@ -1,0 +1,977 @@
+---
+title: "Flow Parsing Gain Analysis"
+author: "Ji-Ze Jang"
+date: "4/4/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Remove all variables in the environment
+```{r}
+rm(list = ls())
+```
+
+## Load required libraries
+```{r}
+library(tidyverse)
+library(magrittr, warn.conflicts = FALSE)
+library(scales, warn.conflicts = FALSE) # for displaying percentages
+library(latex2exp) # for TeX
+```
+
+
+## Helper functions
+Convert radians to degrees.
+```{r}
+rad2deg <- function(rad) {
+  (rad * 180) / (pi)
+}
+
+deg2rad <- function(deg) {
+  (deg * pi) / 180
+}
+```
+
+## Make background of ggplots white
+```{r}
+theme_set(
+  theme_bw()
+)
+```
+
+# Load data
+```{r}
+files = list.files(path = "All", pattern = ".csv", full.names = T)
+
+data = tibble() # create empty table
+
+for (f in files) {
+  data %<>%
+    rbind(
+      read_csv(f) %>% # change empty cells (Reaction Time column) to NA
+        mutate(filename = f))
+}
+```
+
+Number of subjects
+```{r}
+n_subjects <- length(unique(data$subject))
+```
+
+## Hyperparameters
+```{r}
+select_subject <- 4
+select_cond <- "Full"
+select_probe <- "bottom"
+```
+
+## Organize data
+```{r}
+data %<>%
+  
+  mutate(
+    trial = gsub("Trial Number$", "trial", `Trial Number`),
+    condition = gsub("Condition Index$", "condition", `Condition Index`),
+    sector = gsub("Sector Index$", "sector", `Sector Index`),
+    probe_index = gsub("Probe Index$", "probe_index", `Probe Index`),
+    condition = factor(condition,
+                       levels = c(0, 1, 2, 3),
+                       labels = c("Full", "Top", "Bottom", "Control")
+    ),
+    probe_index = factor(probe_index,
+                         levels = c(0, 1),
+                         labels = c("top", "bottom")
+    )
+  ) %>%
+  
+  rename(
+    abs_tilt = `Absolute Tilt`,
+    probe_angle = `Probe Angle`,
+    RT = `Reaction Time`,
+  ) %>%
+
+  # Need to do this at the end. Order matters!
+  select(
+    subject, # ADDED
+    trial, condition, sector, probe_index, abs_tilt, probe_angle, RT
+  )
+```
+
+### Add variables needed to calculate gain
+
+Optic flow speed at the location of the probe.
+```{r}
+data %<>%
+  mutate(
+    
+    # initialize columns
+    flow.y = NA,
+    flow.x = NA,
+    
+    # add optic flow x component
+    # since the probe lies along the vertical axis, the x component has 0 magnitude
+    flow.x = 0,
+    
+    # add optic flow y component for each unique condition
+    flow.y = case_when(
+
+      condition == "Control" & probe_index == "top" ~ 0.209, # Control has *inferred* optic flow
+      condition == "Control" & probe_index == "bottom" ~ -0.209, # Control has *inferred* optic flow
+
+      condition == "Top" & probe_index  == "top" ~ 0.209,
+      condition == "Top" & probe_index == "bottom" ~ -0.209, # Top-bottom has *inferred* optic flow
+
+      condition == "Bottom" & probe_index == "top" ~ 0.209, # Bottom-top has *inferred* optic flow
+      condition == "Bottom" & probe_index == "bottom" ~ -0.209,
+
+      condition == "Full" & probe_index == "top" ~ 0.209,
+      condition == "Full" & probe_index == "bottom" ~ -0.209,
+
+      TRUE ~ NA_real_ # checks for unfilled cells
+    )
+  )
+```
+
+Probe speed.
+```{r}
+resultant_speed = 0.1
+
+# EDIT
+get_angle_to_horizontal <- function(angle) {
+      case_when(
+      angle > 360 ~ NA_real_,
+      between(angle, 0, 360) ~ 90 - angle,
+      T ~ NA_real_)
+}
+
+data %<>%
+  mutate(
+    probe_angle_to_horizontal = get_angle_to_horizontal(probe_angle),
+    
+    # add probe speed components (Note: 0 is upward direction!!!)
+    probe.x = resultant_speed * cos(deg2rad(probe_angle_to_horizontal)),
+    probe.y = resultant_speed * sin(deg2rad(probe_angle_to_horizontal))
+  )
+```
+
+
+## Exclusion criteria
+
+Visualizing raw RTs for exclusion criterion.
+```{r}
+
+# find number of empty RTs (in the beginning)
+length(data$RT[is.na(data$RT)])
+
+# summary of non-empty RTs
+summary(data$RT[2371:length(data$RT)])
+
+# can't really see outlier
+hist(data$RT[2371:length(data$RT)], xlab = "RT (sec)", main = "Histogram of RTs (raw)")
+
+# now we can see the outliers
+boxplot(data$RT[2371:length(data$RT)], xlab = "Trial #", ylab = "RT (sec)")
+
+# identify outliers
+outliers <- boxplot(data$RT[2371:length(data$RT)], xlab = "Trial #", ylab = "RT (sec)")$out
+outliers
+
+min_outlier <- min(outliers)
+
+hist(data$RT[2371:length(data$RT)][data$RT[2371:length(data$RT)] <= min_outlier], xlab = "RT (sec)", main = "Histogram of RTs (outliers removed)")
+
+```
+
+
+Visualizing **log-transformed RTs** for exclusion criterion.
+```{r}
+data %<>%
+  
+  # add log-transform RT, which is a positive random variable
+  mutate(
+    logRT = log10(RT)
+  )
+
+# can't really see outlier
+data %>%
+  ggplot(aes(x = logRT)) +
+  geom_histogram() +
+
+  # Add axis labels
+  xlab("Log RTs (sec)") +    
+  ylab("Frequency") +
+  
+  # Add title
+  ggtitle("[Title]")
+
+# now we can see the outliers
+data %>%
+  ggplot(aes(x = logRT)) +
+  geom_boxplot()
+
+# scale within each subject
+data %<>%
+  
+  # scale / standardize within each subject
+  group_by(subject) %>%
+  mutate(
+    slogRT = as.numeric(scale(logRT))
+  )
+```
+
+Replace empty RT cells from the old stimulus sessions with 5 seconds (there was a 6-second cap).
+```{r}
+data %<>%
+  group_by(subject) %>%
+  mutate(
+    RT = ifelse(is.na(RT), 5, RT),
+    
+    # might be a bit redundant
+    logRT = log10(RT), 
+    slogRT = as.numeric(scale(logRT))
+  ) %>% 
+  ungroup()
+```
+
+Order data by subjects
+```{r}
+data %<>%
+  arrange(subject)
+```
+
+Add **relative_tilt** column.
+```{r}
+# data$rel_tilt <- (data$abs_tilt - data$probe_angle)
+# data
+```
+
+Adjust relative_tilt
+```{r}
+data$rel_tilt = ifelse(abs(data$abs_tilt - data$probe_angle) > 100,
+                       ifelse(data$abs_tilt > data$probe_angle, -(360 - data$abs_tilt + data$probe_angle), (360 - data$probe_angle + data$abs_tilt)),
+                       data$abs_tilt - data$probe_angle)
+```
+
+Take abs(relative_tilt)
+```{r}
+data %<>%
+  mutate(
+    rel_tilt = abs(rel_tilt)
+  )
+```
+
+Keep all columns except for probe_angle and abs_tilt
+```{r}
+# data %>%
+#   select(
+#     -probe_angle, -abs_tilt
+#   )
+```
+
+Add **5?** columns.
+```{r}
+# for later use
+unprocessed <- nrow(data) # all subjects
+unprocessed_subject <- nrow(data[data$subject == select_subject, ]) # one subject
+```
+
+### Implementing exclusion criteria based on RT
+```{r}
+# breaks omitted manually
+
+data %<>% 
+  filter(
+    
+    # Remove trials on which probe_angle_adjusted was not defined (bc probe_angle > 360)
+    !is.na(probe_angle_to_horizontal),
+    
+    # Exclude outliers >3.5 SDs away from the mean log-RT 
+    # (and include subjects for which slogRT is NA since those are the ones that originally had all NAs)
+    is.na(slogRT) | abs(slogRT) <= 3.5)
+
+# for later use
+processed <- nrow(data) # all subjects
+processed_subject <- nrow(data[data$subject == select_subject, ]) # one subject
+```
+
+### So... how much data was excluded?
+```{r}
+excluded <- (unprocessed - processed) / unprocessed * 100 # all subjects
+print(paste(str_replace(paste(excluded, "%"), " ", ""), "of the data was excluded (out of all subjects)."))
+
+excluded_subject <- (unprocessed_subject - processed_subject) / unprocessed_subject * 100 # one subject
+print(paste(str_replace(paste(excluded_subject, "%"), " ", ""), "of the data was excluded for subject", select_subject))
+```
+
+## Start visualizing data!
+
+### Raw data visualization
+
+Comparison across all participants.
+```{r fig.height=4.5, fig.width=7.29}
+
+# rename 'data' to avoid confusion
+data_raw <- data
+
+data_raw %>%
+  
+  filter(condition == select_cond) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = probe_index)) +
+  
+  geom_point() +
+  
+  # Separate by subject
+  facet_wrap(~subject, scales = "free_y", labeller = label_both) +
+  
+  # Add axis labels
+  xlab("Probe Direction (deg)") +    
+  ylab("Perceived probe direction (deg)") +
+  
+  # Add title
+  ggtitle("[Title]", paste("Optic flow condition: ", select_cond)) +
+  
+  # Change legend title?????????????????????????????????
+  guides(colour = guide_legend("Probe location")) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+# # save plot
+# ggsave(filename = "Bottom.png", plot = last_plot(), path = "[file path here]")
+```
+
+For 1 participant.
+```{r fig.height=4.5, fig.width=7.29}
+
+# rename 'data' to avoid confusion
+data_raw_subject <- data
+
+data_raw_subject %>%
+  
+  filter(subject == select_subject) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = probe_index)) + # shape = 
+  
+  geom_point() +
+  
+  geom_abline() +
+  
+  # Separate by condition
+  facet_wrap(~condition, scales = "free_y") +
+
+  # Add axis labels
+  xlab("Probe Direction (deg)") +    
+  ylab("Perceived probe direction (deg)") +
+  
+  # Add title
+  ggtitle("[Title]", paste("Subject ", select_subject)) +
+  
+  # Change legend title?????????????????????????????????
+  guides(colour = guide_legend("Probe location")) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+# # save plot
+# ggsave(filename = paste(paste("Subject", select_subject), "raw.png"), plot = last_plot(), path = "[file path here]")
+```
+
+
+### More complex analysis
+
+Flow parsing gain.
+```{r}
+
+# EDIT
+abs_circular_difference <- function(angle1, angle2) {
+  
+  diff <- angle1 - angle2
+  
+  ifelse(diff < -180, 360 + diff, ifelse(diff > 180, diff - 360, diff))
+}
+
+predicted_absolute_tilt <- function(
+  probe_vector.x, 
+  probe_vector.y, 
+  flow_vector.x, 
+  flow_vector.y, 
+  alpha
+) {
+  angle <- 
+    atan2(
+      # since we want the angle relative to the y axis 
+      # (b/c absolute tilt is relative to 0 = up)
+      probe_vector.y - alpha * flow_vector.y,
+      probe_vector.x - alpha * flow_vector.x
+    ) %>%
+    rad2deg() 
+  
+  case_when(
+    angle >= 0 & angle <= 90 ~ 90 - angle, # Quadrant 1
+    angle > 90 & angle <= 180 ~ 270 + (180 - angle), # Quadrant 2
+    angle <= -90 & angle >= -180 ~ 270 - abs(-180 - angle), # Quadrant 3
+    angle < 0 & angle > -90 ~ 90 + abs(angle), # Quadrant 4
+  )
+}
+
+angular_distance_between_predicted_and_perceived_absolute_tilt <- function(
+  theta, 
+  probe_vector.x, 
+  probe_vector.y, 
+  flow_vector.x,
+  flow_vector.y,
+  alpha
+) {
+  abs_circular_difference(
+    theta,
+    predicted_absolute_tilt(
+      probe_vector.x, 
+      probe_vector.y, 
+      flow_vector.x, 
+      flow_vector.y, 
+      alpha))
+}
+
+summed_angular_squared_distance_between_predicted_and_perceived_absolute_tilt <- function(
+  theta, 
+  probe_vector.x, 
+  probe_vector.y, 
+  flow_vector.x, 
+  flow_vector.y, 
+  alpha
+) {
+
+  sum(
+    angular_distance_between_predicted_and_perceived_absolute_tilt(
+      theta, 
+      probe_vector.x, 
+      probe_vector.y, 
+      flow_vector.x, 
+      flow_vector.y, 
+      alpha)^2)
+}
+
+# rewrite as a function of FP gain (alpha)
+my.summed_angular_squared_distance_between_predicted_and_perceived_absolute_tilt <- function(alpha, data = data_gain) {
+  with(
+    data, # filter() here instead?
+    summed_angular_squared_distance_between_predicted_and_perceived_absolute_tilt(
+      abs_tilt,
+      probe.x,
+      probe.y,
+      flow.x,
+      flow.y,
+      alpha = alpha)
+  )
+}
+
+get_best_fitting_alpha <- function(data) {
+  opt <- optimize(
+    function(x) 
+      my.summed_angular_squared_distance_between_predicted_and_perceived_absolute_tilt(alpha = x, data = data), 
+    lower = 0, upper = 1)
+  
+  return(opt$minimum)
+}
+```
+
+
+### Flow parsing gain
+```{r}
+# reinitialize data for Subject, Condition, Probe location
+data_gain <- data %>%
+  filter(
+    subject == select_subject, 
+    condition == select_cond, 
+    probe_index == select_probe)
+
+# find argmin
+opt <- get_best_fitting_alpha(data = data_gain)
+
+tibble(
+  alpha = seq(0, 1, length.out = 200),
+  fit = sapply(alpha, my.summed_angular_squared_distance_between_predicted_and_perceived_absolute_tilt)) %>%
+  ggplot(aes(x = alpha, y = fit)) +
+  geom_line() +
+
+  # Add axis labels
+  xlab(TeX("Gain, $\\alpha$")) +    
+  ylab(TeX("$\\Sigma (\\theta$ - $tan^{-1}$)^2")) +
+  
+  # Add title
+  ggtitle("[Title]", paste(paste("Subject", select_subject), paste(paste(", Optic flow:", select_cond)), paste(", Probe location:", select_probe)))
+
+# # save ggplot
+# ggsave(filename = "optimization.png", plot = last_plot(), path = "[file path here]")
+```
+
+
+### For 1 subject. [WRONG - can't use geom_smooth()]
+```{r plot-prediction-under-optimal-gain}
+data_gain %<>%
+  mutate(
+    predicted_absolute_tilt = 
+      predicted_absolute_tilt(
+        probe.x,
+        probe.y,
+        flow.x,
+        flow.y,
+        alpha = opt)
+  )
+
+data_gain %>%
+  mutate(alpha = signif(get_best_fitting_alpha(.), 4)) %>%
+
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
+  
+  geom_point(alpha = .4) +
+  geom_smooth(aes(y = predicted_absolute_tilt, colour = "gain = optimal"), linetype = "dashed", alpha = 2, se = FALSE) +
+  geom_smooth(aes(y =
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 0), colour = "gain = 0"), linetype = "solid", alpha = .5, se = FALSE) +
+  geom_smooth(aes(y =
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 1), colour = "gain = 1"), linetype = "twodash", alpha = .5, se = FALSE) +
+
+  geom_text(
+    data = ~ .x %>%
+      select(alpha) %>%
+      distinct(),
+    aes(label = paste("Best fitting gain:", alpha)),
+    x = 0,
+    y = 360,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    name = "Raw data & Gain",
+    breaks = c("data", "gain = optimal", "gain = 0", "gain = 1"),
+    # values = c("red", "green", "grey40", "blue"), # color scheme 1
+    # values = c("firebrick2", "springgreen3", "deepskyblue4", "purple3"), # color scheme 2
+    values = c("grey50", "green2", "skyblue2", "red"),
+    drop = TRUE
+  ) +
+  
+  # tidy up legend aesthetics
+  guides(color = guide_legend(override.aes = list(fill = NA, shape = c(19, NA, NA, NA), linetype = c("blank", "dashed", "solid", "twodash")))) +
+  
+  # # Separate by condition
+  # facet_wrap(~condition, scales = "free_y") +
+
+  # Add axis labels
+  xlab("Probe Angle (deg)") +    
+  ylab("Actual and Predicted Response (deg)") +
+  
+  # Add title
+  ggtitle("[Title]", paste(paste("Subject", select_subject), paste(paste(", Optic flow:", select_cond)), paste(", Probe location:", select_probe))) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  )
+
+# # save ggplot
+# info <- paste(paste("Subject", select_subject), paste(paste(", ", paste(select_cond, " condition")), paste(", Probe at", select_probe), sep = ""), sep = "")
+# 
+# ggsave(filename = paste(info, ".png", sep = ""),
+#        plot = last_plot(), path = "[file path here]", width = 8, height = 5)
+```
+
+
+### For multiple subjects. [WRONG - can't use geom_smooth()]
+```{r, fig.height=20, fig.width=12}
+data %<>%
+  group_by(subject, condition, probe_index) %>%
+  
+  nest() %>%
+  
+  mutate(alpha = signif(unlist(map(data, get_best_fitting_alpha)), 4)) %>%
+  unnest(data) %>%
+  mutate(
+    predicted_absolute_tilt = predicted_absolute_tilt(
+    probe.x, probe.y, flow.x, flow.y, alpha)
+  )
+
+data %>%
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
+  
+  geom_point(alpha = .4) +
+  geom_smooth(aes(y = predicted_absolute_tilt, colour = "gain = optimal"), linetype = "dashed", alpha = 2, se = FALSE) +
+  geom_smooth(aes(y = 
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 0), colour = "gain = 0"), linetype = "solid", alpha = .5, se = FALSE) +
+  geom_smooth(aes(y = 
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 1), colour = "gain = 1"), linetype = "twodash", alpha = .5, se = FALSE) +
+  
+  geom_text(
+    data = ~ .x %>%
+      select(alpha) %>%
+      distinct(),
+    aes(label = paste("Best fitting gain:", alpha)),
+    x = 0,
+    y = 360,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    name = "Raw data & Gain",
+    breaks = c("data", "gain = optimal", "gain = 0", "gain = 1"),
+    # values = c("red", "green", "grey40", "blue"), # color scheme 1
+    # values = c("firebrick2", "springgreen3", "deepskyblue4", "purple3"), # color scheme 2
+    values = c("grey50", "green2", "skyblue2", "red"),
+    drop = TRUE
+  ) +
+  
+  # tidy up legend aesthetics
+  guides(color = guide_legend(override.aes = list(fill = NA, shape = c(19, NA, NA, NA), linetype = c("blank", "dashed", "solid", "twodash")))) +
+
+  # plots of subjects for each unique condition
+  facet_grid(subject + probe_index ~ condition, labeller = labeller(subject = label_both)) +
+
+  # Add axis labels
+  xlab("Probe Angle (deg)") +    
+  ylab("Actual and Predicted Response (deg)") +
+  
+  # Add title
+  ggtitle("[Title]") +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  )
+
+# # save ggplot
+# ggsave(filename = "All.png",
+#        plot = last_plot(), path = "[file path here]", width = 12, height = 20)
+```
+
+
+# UR Expo
+
+## All
+```{r fig.height=20, fig.width=12}
+data %>%
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
+  
+  geom_point(alpha = .4) +
+  geom_point(aes(y = predicted_absolute_tilt, colour = "gain = optimal")) +
+  geom_point(aes(y = 
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 0), colour = "gain = 0")) +
+  geom_point(aes(y = 
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 1), colour = "gain = 1")) +
+  
+  geom_text(
+    data = ~ .x %>%
+      select(alpha) %>%
+      distinct(),
+    aes(label = paste("Best fitting gain:", alpha)),
+    x = 0,
+    y = 360,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    name = "Raw data & Gain",
+    breaks = c("data", "gain = optimal", "gain = 0", "gain = 1"),
+    values = c("grey50", "green2", "skyblue2", "red"),
+    drop = TRUE
+  ) +
+
+  # plots of subjects for each unique condition
+  facet_grid(subject + probe_index ~ condition, labeller = labeller(subject = label_both)) +
+
+  # Add axis labels
+  xlab("Probe Angle (deg)") +    
+  ylab("Actual and Predicted Response (deg)") +
+  
+  # # Add title
+  ggtitle("[Title]") +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  )
+
+# # save ggplot
+# ggsave(filename = "All.png",
+#        plot = last_plot(), path = "[file path here]", width = 12, height = 20)
+```
+
+## Prediction plots (N=1)
+```{r fig.height=6, fig.width=15}
+data %>%
+  filter(subject == select_subject) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
+  
+  geom_point(alpha = .4) +
+  geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain"), linetype = "solid", alpha = 2, se = FALSE) +
+  
+  geom_abline() +
+  
+  geom_text(
+    data = ~ .x %>%
+      select(alpha) %>%
+      distinct(),
+    aes(label = paste("Gain:", alpha)),
+    x = 0,
+    y = 360,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    name = "Raw data & Gain",
+    breaks = c("data", "best fitting gain"),
+    values = c("grey50", "red"),
+    drop = TRUE
+  ) +
+  
+  # tidy up legend aesthetics
+  # guides(color = guide_legend(override.aes = list(fill = NA, shape = c(19, NA), linetype = c("blank", "solid")))) +
+
+  # plots of 1 subject for each unique condition
+  facet_grid(probe_index ~ condition) +
+  
+  # set x-axis scale
+  scale_x_continuous(breaks = c(0, 90, 180, 360)) +
+
+  # Add axis labels
+  xlab("Probe Angle (deg)") +    
+  ylab("Actual and Predicted Response (deg)") +
+  
+  # # Add title
+  ggtitle("Perceived vs. Actual direction of motion", subtitle = paste("Subject", select_subject)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        aspect.ratio = 1 # makes axes ratio 1:1
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), ".png", sep = ""),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+## Scatterplots (N=6)
+```{r}
+# reinitialize data for Subject, Unique condition
+gain_scatter_prep <- data %>%
+  subset(select = c(subject, condition, probe_index, alpha)) %>%
+  distinct() # get rid of duplicate rows
+```
+
+### Same vs. Opposite
+```{r}
+Same.Opposite <- tibble(.rows = 2 * n_subjects) # empty table (2 * n_subjects) x (n_conditions / 2)
+
+Same.Opposite %<>%
+  mutate(
+    Same = 
+      gain_scatter_prep[(gain_scatter_prep$condition == "Top" & gain_scatter_prep$probe_index == "top") | 
+                          (gain_scatter_prep$condition == "Bottom" & gain_scatter_prep$probe_index == "bottom"), ]$alpha,
+    
+    Opposite =
+      gain_scatter_prep[(gain_scatter_prep$condition == "Top" & gain_scatter_prep$probe_index == "bottom") | 
+                          (gain_scatter_prep$condition == "Bottom" & gain_scatter_prep$probe_index == "top"), ]$alpha
+  )
+
+Same.Opposite %>%
+  
+  ggplot(aes(x = Same, y = Opposite)) +
+  geom_point(colour = "blue", size = 2) +
+  xlim(0, 0.6) +
+  ylim(0, 0.6) +
+  geom_abline() +
+  # geom_smooth(se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain (same hemifield)") +    
+  ylab("Gain (opposite hemifields)") +
+  
+  # Add title
+  ggtitle("Best Fitting Gain for Same vs. Opposite", subtitle = paste("N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(Same vs. Opposite).png"),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+### probe top vs. probe bottom
+```{r}
+top.bottom <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+top.bottom %<>%
+  mutate(
+    FT = gain_scatter_prep[gain_scatter_prep$condition == "Full" & gain_scatter_prep$probe_index == "top", ]$alpha,
+    FB = gain_scatter_prep[gain_scatter_prep$condition == "Full" & gain_scatter_prep$probe_index == "bottom", ]$alpha,
+    TT = gain_scatter_prep[gain_scatter_prep$condition == "Top" & gain_scatter_prep$probe_index == "top", ]$alpha,
+    TB = gain_scatter_prep[gain_scatter_prep$condition == "Top" & gain_scatter_prep$probe_index == "bottom", ]$alpha,
+    BT = gain_scatter_prep[gain_scatter_prep$condition == "Bottom" & gain_scatter_prep$probe_index == "top", ]$alpha,
+    BB = gain_scatter_prep[gain_scatter_prep$condition == "Bottom" & gain_scatter_prep$probe_index == "bottom", ]$alpha,
+    CT = gain_scatter_prep[gain_scatter_prep$condition == "Control" & gain_scatter_prep$probe_index == "top", ]$alpha,
+    CB = gain_scatter_prep[gain_scatter_prep$condition == "Control" & gain_scatter_prep$probe_index == "bottom", ]$alpha
+  ) %>%
+  
+  ggplot(aes(x = FT, y = FB)) +
+  geom_point(colour = "blue", size = 2) +
+  xlim(0.13, 0.45) +
+  ylim(0.13, 0.45) +
+  geom_abline() +
+  # geom_smooth(method = lm, se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain when probe in upper hemifield") +    
+  ylab("Gain when probe in lower hemifield") +
+  
+  # Add title
+  ggtitle("Best Fitting Gain for Probe in Top vs. Bottom", subtitle = paste("N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(probe top vs. probe bottom).png"),
+#        plot = last_plot(), path = "[file path here]")
+
+```
+
+
+### OF Top vs. OF Bottom
+```{r}
+Top.Bottom <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+Top.Bottom %<>%
+  mutate(
+    Top = 
+      (gain_scatter_prep[gain_scatter_prep$condition == "Top" & gain_scatter_prep$probe_index == "top", ]$alpha + 
+                          gain_scatter_prep[gain_scatter_prep$condition == "Top" & gain_scatter_prep$probe_index == "bottom", ]$alpha) / 2,
+    
+    Bottom =
+      (gain_scatter_prep[(gain_scatter_prep$condition == "Bottom" & gain_scatter_prep$probe_index == "top"), ]$alpha +
+                          gain_scatter_prep[gain_scatter_prep$condition == "Bottom" & gain_scatter_prep$probe_index == "bottom", ]$alpha) / 2
+  ) %>%
+  
+  ggplot(aes(x = Top, y = Bottom)) +
+  geom_point(colour = "blue", size = 2) +
+  xlim(0.07, 0.33) +
+  ylim(0.07, 0.33) +
+  geom_abline() +
+  # geom_smooth(method = lm, se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain when optic flow in upper hemifield") +    
+  ylab("Gain when optic flow in lower hemifield") +
+  
+  # Add title
+  ggtitle("Average Best Fitting Gain for Optic Flow in Top vs. Bottom", subtitle = paste("N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(OF Top vs. OF Bottom).png"),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+### Top-Top vs. Bottom-Bottom
+```{r}
+Same.comparison <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+Same.comparison %<>%
+  mutate(
+    Same.Top = 
+      gain_scatter_prep[gain_scatter_prep$condition == "Top" & gain_scatter_prep$probe_index == "top", ]$alpha,
+    
+    Same.Bottom =
+      gain_scatter_prep[gain_scatter_prep$condition == "Bottom" & gain_scatter_prep$probe_index == "bottom", ]$alpha
+  ) %>%
+  
+  ggplot(aes(x = Same.Bottom, y = Same.Top)) +
+  geom_point(colour = "blue", size = 2) +
+  xlim(0.18, 0.55) +
+  ylim(0.18, 0.55) +
+  geom_abline() +
+  # geom_smooth(method = lm, se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain (probe bottom, optic flow bottom)") +    
+  ylab("Gain (probe top, optic flow top)") +
+  
+  # Add title
+  ggtitle("Best Fitting Gain for Top-Top vs. Bottom-Bottom", subtitle = paste("N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(Top-Top vs. Bottom-Bottom).png"),
+#        plot = last_plot(), path = "[file path here]")
+```
