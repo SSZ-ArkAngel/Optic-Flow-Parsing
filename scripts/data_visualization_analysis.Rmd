@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Remove all variables in the environment
 ```{r}
-rm(list = ls())
+# rm(list = ls())
 ```
 
 ## Load required libraries
@@ -44,7 +44,7 @@ theme_set(
 
 # Load data
 ```{r}
-files = list.files(path = "All", pattern = ".csv", full.names = T)
+files = list.files(path = paste(dirname(getwd()), "/data", sep = ""), pattern = ".csv", full.names = T)
 
 data = tibble() # create empty table
 
@@ -54,6 +54,7 @@ for (f in files) {
       read_csv(f) %>% # change empty cells (Reaction Time column) to NA
         mutate(filename = f))
 }
+
 ```
 
 Number of subjects
@@ -893,7 +894,6 @@ top.bottom %<>%
 
 ```
 
-
 ### OF Top vs. OF Bottom
 ```{r}
 Top.Bottom <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
@@ -975,3 +975,296 @@ Same.comparison %<>%
 # ggsave(filename = paste(paste("Subject", select_subject), "(Top-Top vs. Bottom-Bottom).png"),
 #        plot = last_plot(), path = "[file path here]")
 ```
+
+# Analysis using bootstrapped data
+$CI = \overline{x} \pm z \times sd $ (not using $SE=\frac{s}{\sqrt{n}}$!)
+
+Organize bootstrapped data.
+```{r}
+CI <- read.csv(paste(dirname(getwd()), "/CI.csv", sep = ""))
+
+CI %<>%
+  mutate(
+    median_alpha = median,
+    probe_index = probe
+  ) %>%
+  
+  select(
+    subject,
+    condition,
+    probe_index,
+    lower,
+    median_alpha,
+    upper
+  )
+```
+
+## Scatterplots *with CIs*
+
+### Same vs. Opposite *with CIs*
+```{r}
+Same.Opposite <- tibble(.rows = 2 * n_subjects) # empty table (2 * n_subjects) x n_conditions
+
+Same.Opposite %<>%
+  mutate(
+    Same = 
+      CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$median_alpha,
+    
+    Opposite =
+      CI[(CI$condition == "Top" & CI$probe_index == "bottom") | (CI$condition == "Bottom" & CI$probe_index == "top"), ]$median_alpha
+  )
+
+Same.Opposite %>%
+  
+  ggplot(aes(x = Same, y = Opposite)) +
+  geom_point(colour = "blue", size = 2) +
+  
+  geom_errorbar(aes(ymin = CI[(CI$condition == "Top" & CI$probe_index == "bottom") | (CI$condition == "Bottom" & CI$probe_index == "top"), ]$lower,
+                    ymax = CI[(CI$condition == "Top" & CI$probe_index == "bottom") | (CI$condition == "Bottom" & CI$probe_index == "top"), ]$upper)) +
+  
+  geom_errorbarh(aes(xmin = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$lower,
+                     xmax = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$upper)) +
+  
+  xlim(0, 0.6) +
+  ylim(0, 0.6) +
+  geom_abline() +
+  # geom_smooth(se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain (same hemifield)") +    
+  ylab("Gain (opposite hemifields)") +
+  
+  # Add title
+  ggtitle("Best Fitting Gain for Same vs. Opposite", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(Same vs. Opposite) with CIs.png"),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+### probe top vs. probe bottom *with CIs*
+```{r}
+top.bottom <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+top.bottom %<>%
+  mutate(
+    FT = CI[CI$condition == "Full" & CI$probe_index == "top", ]$median_alpha,
+    FB = CI[CI$condition == "Full" & CI$probe_index == "bottom", ]$median_alpha,
+    TT = CI[CI$condition == "Top" & CI$probe_index == "top", ]$median_alpha,
+    TB = CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$median_alpha,
+    BT = CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$median_alpha,
+    BB = CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$median_alpha,
+    CT = CI[CI$condition == "Control" & CI$probe_index == "top", ]$median_alpha,
+    CB = CI[CI$condition == "Control" & CI$probe_index == "bottom", ]$median_alpha
+  ) %>%
+  
+  ggplot(aes(x = FT, y = FB)) +
+  geom_point(colour = "blue", size = 2) +
+  
+  geom_errorbar(aes(ymin = CI[CI$condition == "Full" & CI$probe_index == "bottom", ]$lower, ymax = CI[CI$condition == "Full" & CI$probe_index == "bottom", ]$upper)) +
+  
+  geom_errorbarh(aes(xmin = CI[CI$condition == "Full" & CI$probe_index == "top", ]$lower, xmax = CI[CI$condition == "Full" & CI$probe_index == "top", ]$upper)) +
+  
+  xlim(0.10, 0.48) +
+  ylim(0.10, 0.48) +
+  geom_abline() +
+  # geom_smooth(method = lm, se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain when probe in upper hemifield") +    
+  ylab("Gain when probe in lower hemifield") +
+  
+  # Add title
+  ggtitle("Best Fitting Gain for Probe in Top vs. Bottom", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(probe top vs. probe bottom) with CIs.png"),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+### OF Top vs. OF Bottom *with CIs*
+```{r}
+Top.Bottom <- tibble(.rows = 2 * n_subjects) # empty table (2 * n_subjects) x n_conditions
+
+Top.Bottom %<>%
+  # mutate(
+  #   Top = 
+  #     (CI[CI$condition == "Top" & CI$probe_index == "top", ]$median_alpha + CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$median_alpha) / 2,
+  #   
+  #   Bottom =
+  #     (CI[(CI$condition == "Bottom" & CI$probe_index == "top"), ]$median_alpha + CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$median_alpha) / 2
+  # ) %>%
+  
+  mutate(
+    Top = 
+      CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]$median_alpha,
+    
+    Bottom =
+      CI[(CI$condition == "Bottom" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$median_alpha
+  ) %>%
+  
+  ggplot(aes(x = Top, y = Bottom)) +
+  geom_point(colour = "blue", size = 2) +
+  
+  geom_errorbar(aes(ymin = CI[(CI$condition == "Bottom" & CI$probe_index == "top") | CI$condition == "Bottom" & CI$probe_index == "bottom", ]$lower,
+                    ymax = CI[(CI$condition == "Bottom" & CI$probe_index == "top") | CI$condition == "Bottom" & CI$probe_index == "bottom", ]$upper)) +
+  
+  geom_errorbarh(aes(xmin = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]$lower,
+                     xmax = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]$upper)) +
+  
+  xlim(0.00, 0.53) +
+  ylim(0.00, 0.53) +
+  geom_abline() +
+  # geom_smooth(method = lm, se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain when optic flow in upper hemifield") +    
+  ylab("Gain when optic flow in lower hemifield") +
+  
+  # Add title
+  ggtitle("Average Best Fitting Gain for Optic Flow in Top vs. Bottom", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(OF Top vs. OF Bottom) with CIs.png"),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+### Top-Top vs. Bottom-Bottom *with CIs*
+```{r}
+Same.comparison <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+Same.comparison %<>%
+  mutate(
+    Same.Top = 
+      CI[CI$condition == "Top" & CI$probe_index == "top", ]$median_alpha,
+    
+    Same.Bottom =
+      CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$median_alpha
+  ) %>%
+  
+  ggplot(aes(x = Same.Bottom, y = Same.Top)) +
+  geom_point(colour = "blue", size = 2) +
+  
+  geom_errorbar(aes(ymin = CI[CI$condition == "Top" & CI$probe_index == "top", ]$lower,
+                    ymax = CI[CI$condition == "Top" & CI$probe_index == "top", ]$upper)) +
+  
+  geom_errorbarh(aes(xmin = CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$lower,
+                     xmax = CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$upper)) +
+  
+  xlim(0.10, 0.55) +
+  ylim(0.10, 0.55) +
+  geom_abline() +
+  # geom_smooth(method = lm, se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain (probe bottom, optic flow bottom)") +    
+  ylab("Gain (probe top, optic flow top)") +
+  
+  # Add title
+  ggtitle("Best Fitting Gain for Top-Top vs. Bottom-Bottom", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(Top-Top vs. Bottom-Bottom) with CIs.png"),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+### Top-bottom vs. Bottom-top *with CIs* [NEW!]
+```{r}
+Opposite <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+Opposite %<>%
+  mutate(
+    Top_bottom = 
+      CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$median_alpha,
+    
+    Bottom_top =
+      CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$median_alpha
+  )
+
+Opposite %>%
+  
+  ggplot(aes(x = Bottom_top, y = Top_bottom)) +
+  geom_point(colour = "blue", size = 2) +
+  
+  geom_errorbar(aes(ymin = CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$lower,
+                    ymax = CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$upper)) +
+  
+  geom_errorbarh(aes(xmin = CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$lower,
+                     xmax = CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$upper)) +
+  
+  xlim(0.0, 0.2) +
+  ylim(0.0, 0.2) +
+  geom_abline() +
+  # geom_smooth(se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain when flow-Bottom probe-top") +    
+  ylab("Gain when flow-Top probe-bottom") +
+  
+  # Add title
+  ggtitle("Best Fitting Gain for Opposite Flow/probe Locations", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.position = "none"
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "(Top-bottom vs. Bottom-top) with CIs.png"),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+## Paired t-test
+- No significance --> compare Top-Top vs. Bottom-Bottom
+- Significance --> ???
+```{r}
+# 
+# Full_top <- CI[CI$condition == "Full", CI$probe == "top", ]$alpha
+# Full_bottom <- CI
+```
+
+## Multiple regression
+```{r}
+# gain <- data$alpha
+# flow <- data$condition
+# probe <- data$probe_index
+# lm_gain <- lm(gain ~ flow + probe + flow*probe)
+# 
+# lm_gain
+```
+
