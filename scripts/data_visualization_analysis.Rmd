@@ -25,7 +25,7 @@ library(latex2exp) # for TeX
 
 ## Helper functions
 Convert radians to degrees.
-```{r}
+```{r Convert radians to degrees.}
 rad2deg <- function(rad) {
   (rad * 180) / (pi)
 }
@@ -70,7 +70,7 @@ select_probe <- "bottom"
 ```
 
 ## Organize data
-```{r}
+```{r Organize data}
 data %<>%
   
   mutate(
@@ -104,7 +104,7 @@ data %<>%
 ### Add variables needed to calculate gain
 
 Optic flow speed at the location of the probe.
-```{r}
+```{r Optic flow speed at the location of the probe (calculations).}
 data %<>%
   mutate(
     
@@ -162,7 +162,7 @@ data %<>%
 ## Exclusion criteria
 
 Visualizing raw RTs for exclusion criterion.
-```{r}
+```{r Visualizing raw RTs for exclusion criterion.}
 
 # find number of empty RTs (in the beginning)
 length(data$RT[is.na(data$RT)])
@@ -188,7 +188,7 @@ hist(data$RT[2371:length(data$RT)][data$RT[2371:length(data$RT)] <= min_outlier]
 
 
 Visualizing **log-transformed RTs** for exclusion criterion.
-```{r}
+```{r Visualizing **log-transformed RTs** for exclusion criterion.}
 data %<>%
   
   # add log-transform RT, which is a positive random variable
@@ -280,7 +280,7 @@ unprocessed_subject <- nrow(data[data$subject == select_subject, ]) # one subjec
 ```
 
 ### Implementing exclusion criteria based on RT
-```{r}
+```{r Implementing exclusion criteria based on RT}
 # breaks omitted manually
 
 data %<>% 
@@ -389,7 +389,7 @@ data_raw_subject %>%
 ### More complex analysis
 
 Flow parsing gain.
-```{r}
+```{r Flow parsing gain (functions).}
 
 # EDIT
 abs_circular_difference <- function(angle1, angle2) {
@@ -979,9 +979,9 @@ Same.comparison %<>%
 # Analysis using bootstrapped data
 $CI = \overline{x} \pm z \times sd $ (not using $SE=\frac{s}{\sqrt{n}}$!)
 
-Organize bootstrapped data.
+Organize bootstrapped CIs. []
 ```{r}
-CI <- read.csv(paste(dirname(getwd()), "/CI.csv", sep = ""))
+CI <- read.csv(paste(dirname(getwd()), "/bootstrapped data/CI.csv", sep = ""))
 
 CI %<>%
   mutate(
@@ -998,6 +998,15 @@ CI %<>%
     upper
   )
 ```
+
+
+Organize bootstrapped samples.
+```{r}
+boo <- read.csv(paste(dirname(getwd()), "/bootstrapped data/bootstrap_data.csv", sep = ""))
+
+```
+
+
 
 ## Scatterplots *with CIs*
 
@@ -1201,7 +1210,7 @@ Same.comparison %<>%
 ```
 
 ### Top-bottom vs. Bottom-top *with CIs* [NEW!]
-```{r}
+```{r Top-bottom vs. Bottom-top *with CIs*}
 Opposite <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
 
 Opposite %<>%
@@ -1267,4 +1276,3 @@ Opposite %>%
 # 
 # lm_gain
 ```
-
