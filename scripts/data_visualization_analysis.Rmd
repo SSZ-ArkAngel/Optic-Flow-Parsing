@@ -1054,8 +1054,8 @@ Same.Opposite %>%
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 15),
-        legend.text = element_text(size = 12),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.position = "none",
         aspect.ratio = 1 # ADDED
   )
@@ -1103,8 +1103,8 @@ top.bottom %<>%
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 15),
-        legend.text = element_text(size = 12),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.position = "none",
         aspect.ratio = 1 # ADDED
   )
@@ -1182,7 +1182,7 @@ Top.Bottom %<>%
         legend.position = "none",
         aspect.ratio = 1, # ADDED
         
-        plot.subtitle = element_text(size = 10) # ADDED
+        # plot.subtitle = element_text(size = 10) # ADDED
   )
 
 # # save ggplot
@@ -1227,8 +1227,8 @@ Same.comparison %<>%
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 15),
-        legend.text = element_text(size = 12),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.position = "none",
         aspect.ratio = 1 # ADDED
   )
@@ -1277,8 +1277,8 @@ Opposite %>%
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 15),
-        legend.text = element_text(size = 12),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
         legend.position = "none",
         aspect.ratio = 1 # ADDED
   )
