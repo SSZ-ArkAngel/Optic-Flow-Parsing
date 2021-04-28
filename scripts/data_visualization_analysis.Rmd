@@ -2,7 +2,9 @@
 title: "Flow Parsing Gain Analysis"
 author: "Ji-Ze Jang"
 date: "4/4/2021"
-output: pdf_document
+output:
+  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -188,7 +190,7 @@ hist(data$RT[2371:length(data$RT)][data$RT[2371:length(data$RT)] <= min_outlier]
 
 
 Visualizing **log-transformed RTs** for exclusion criterion.
-```{r Visualizing **log-transformed RTs** for exclusion criterion.}
+```{r Visualizing log-transformed RTs for exclusion criterion.}
 data %<>%
   
   # add log-transform RT, which is a positive random variable
@@ -280,7 +282,7 @@ unprocessed_subject <- nrow(data[data$subject == select_subject, ]) # one subjec
 ```
 
 ### Implementing exclusion criteria based on RT
-```{r Implementing exclusion criteria based on RT}
+```{r}
 # breaks omitted manually
 
 data %<>% 
@@ -977,7 +979,7 @@ Same.comparison %<>%
 ```
 
 # Analysis using bootstrapped data
-$CI = \overline{x} \pm z \times sd $ (not using $SE=\frac{s}{\sqrt{n}}$!)
+$$CI = \overline{x} \pm z \times sd $$ (not using $$SE=\frac{s}{\sqrt{n}}$$!)
 
 ## Organize CI data.
 ```{r}
@@ -1239,7 +1241,7 @@ Same.comparison %<>%
 ```
 
 ### Top-bottom vs. Bottom-top *with CIs* [NEW!]
-```{r Top-bottom vs. Bottom-top *with CIs*}
+```{r}
 Opposite <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
 
 Opposite %<>%
