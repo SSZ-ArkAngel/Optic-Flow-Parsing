@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Remove all variables in the environment
 ```{r}
-# rm(list = ls())
+rm(list = ls())
 ```
 
 ## Load required libraries
@@ -979,7 +979,7 @@ Same.comparison %<>%
 # Analysis using bootstrapped data
 $CI = \overline{x} \pm z \times sd $ (not using $SE=\frac{s}{\sqrt{n}}$!)
 
-Organize bootstrapped CIs. []
+## Organize CI data.
 ```{r}
 CI <- read.csv(paste(dirname(getwd()), "/bootstrapped data/CI.csv", sep = ""))
 
@@ -999,11 +999,16 @@ CI %<>%
   )
 ```
 
-
-Organize bootstrapped samples.
+## Combine bootstrapped sample data with CI calculations.
 ```{r}
-boo <- read.csv(paste(dirname(getwd()), "/bootstrapped data/bootstrap_data.csv", sep = ""))
+bootstrap_samples <- read.csv(paste(dirname(getwd()), "/bootstrapped data/bootstrap_data.csv", sep = ""))
 
+bootstrap_data <- bind_cols(CI, bootstrap_samples)
+
+bootstrap_data %<>%
+  select(
+    -X
+  )
 ```
 
 
@@ -1034,8 +1039,8 @@ Same.Opposite %>%
   geom_errorbarh(aes(xmin = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$lower,
                      xmax = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$upper)) +
   
-  xlim(0, 0.6) +
-  ylim(0, 0.6) +
+  xlim(0, 0.55) +
+  ylim(0, 0.55) +
   geom_abline() +
   # geom_smooth(se = FALSE) + # regression line
   
@@ -1051,7 +1056,8 @@ Same.Opposite %>%
         panel.grid.minor = element_blank(),
         text = element_text(size = 15),
         legend.text = element_text(size = 12),
-        legend.position = "none"
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
   )
 
 # # save ggplot
@@ -1088,8 +1094,8 @@ top.bottom %<>%
   # geom_smooth(method = lm, se = FALSE) + # regression line
   
   # Add axis labels
-  xlab("Gain when probe in upper hemifield") +    
-  ylab("Gain when probe in lower hemifield") +
+  xlab("Gain (probe top, optic flow full)") +    
+  ylab("Gain (probe bottom, optic flow full)") +
   
   # Add title
   ggtitle("Best Fitting Gain for Probe in Top vs. Bottom", subtitle = paste("with bootstrapping. N =", n_subjects)) +
@@ -1099,7 +1105,8 @@ top.bottom %<>%
         panel.grid.minor = element_blank(),
         text = element_text(size = 15),
         legend.text = element_text(size = 12),
-        legend.position = "none"
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
   )
 
 # # save ggplot
@@ -1107,36 +1114,54 @@ top.bottom %<>%
 #        plot = last_plot(), path = "[file path here]")
 ```
 
+
 ### OF Top vs. OF Bottom *with CIs*
+
+Modify row names of CI dataframe.
 ```{r}
+for (i in 1:nrow(CI)) {
+  rownames(CI)[i] <- paste(CI$subject[i], paste(CI$condition[i], CI$probe_index[i], sep = "-"), sep = ", ")
+}
+```
+
+```{r fig.height=6, fig.width=15}
 Top.Bottom <- tibble(.rows = 2 * n_subjects) # empty table (2 * n_subjects) x n_conditions
 
 Top.Bottom %<>%
   # mutate(
-  #   Top = 
-  #     (CI[CI$condition == "Top" & CI$probe_index == "top", ]$median_alpha + CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$median_alpha) / 2,
-  #   
+  #   Top =
+  #     (bootstrap_data[bootstrap_data$condition == "Top" & bootstrap_data$probe_index == "top", 7:1006] +
+  #        bootstrap_data[bootstrap_data$condition == "Top" & bootstrap_data$probe_index == "bottom", 7:1006]) / 2,
+  # 
   #   Bottom =
-  #     (CI[(CI$condition == "Bottom" & CI$probe_index == "top"), ]$median_alpha + CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$median_alpha) / 2
+  #     (bootstrap_data[bootstrap_data$condition == "Bottom" & bootstrap_data$probe_index == "top", 7:1006] +
+  #        bootstrap_data[bootstrap_data$condition == "Bottom" & bootstrap_data$probe_index == "bottom", 7:1006]) / 2
   # ) %>%
   
   mutate(
-    Top = 
-      CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]$median_alpha,
-    
+    Top =
+      CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ], # EDIT
+
     Bottom =
-      CI[(CI$condition == "Bottom" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$median_alpha
+      CI[(CI$condition == "Bottom" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ] # EDIT
   ) %>%
   
-  ggplot(aes(x = Top, y = Bottom)) +
+  ggplot(aes(x = Top$median_alpha, y = Bottom$median_alpha, 
+             label = rownames(CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]))) + # EDIT
+  
   geom_point(colour = "blue", size = 2) +
   
+  # ADDED
+  geom_text(aes(label = rownames(CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]),
+                hjust = -0.1, vjust = 1.5),
+            check_overlap = TRUE) +
+
   geom_errorbar(aes(ymin = CI[(CI$condition == "Bottom" & CI$probe_index == "top") | CI$condition == "Bottom" & CI$probe_index == "bottom", ]$lower,
                     ymax = CI[(CI$condition == "Bottom" & CI$probe_index == "top") | CI$condition == "Bottom" & CI$probe_index == "bottom", ]$upper)) +
-  
+
   geom_errorbarh(aes(xmin = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]$lower,
                      xmax = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]$upper)) +
-  
+
   xlim(0.00, 0.53) +
   ylim(0.00, 0.53) +
   geom_abline() +
@@ -1147,14 +1172,17 @@ Top.Bottom %<>%
   ylab("Gain when optic flow in lower hemifield") +
   
   # Add title
-  ggtitle("Average Best Fitting Gain for Optic Flow in Top vs. Bottom", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Best Fitting Gain for Optic Flow in Top vs. Bottom", subtitle = paste("with bootstrapping. N =", n_subjects)) +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 15),
-        legend.text = element_text(size = 12),
-        legend.position = "none"
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.position = "none",
+        aspect.ratio = 1, # ADDED
+        
+        plot.subtitle = element_text(size = 10) # ADDED
   )
 
 # # save ggplot
@@ -1201,7 +1229,8 @@ Same.comparison %<>%
         panel.grid.minor = element_blank(),
         text = element_text(size = 15),
         legend.text = element_text(size = 12),
-        legend.position = "none"
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
   )
 
 # # save ggplot
@@ -1233,14 +1262,14 @@ Opposite %>%
   geom_errorbarh(aes(xmin = CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$lower,
                      xmax = CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$upper)) +
   
-  xlim(0.0, 0.2) +
-  ylim(0.0, 0.2) +
+  xlim(0, 0.2) +
+  ylim(0, 0.2) +
   geom_abline() +
   # geom_smooth(se = FALSE) + # regression line
   
   # Add axis labels
-  xlab("Gain when flow-Bottom probe-top") +    
-  ylab("Gain when flow-Top probe-bottom") +
+  xlab("Gain (probe top, optic flow bottom)") +    
+  ylab("Gain (probe bottom, optic flow top)") +
   
   # Add title
   ggtitle("Best Fitting Gain for Opposite Flow/probe Locations", subtitle = paste("with bootstrapping. N =", n_subjects)) +
@@ -1250,7 +1279,8 @@ Opposite %>%
         panel.grid.minor = element_blank(),
         text = element_text(size = 15),
         legend.text = element_text(size = 12),
-        legend.position = "none"
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
   )
 
 # # save ggplot
