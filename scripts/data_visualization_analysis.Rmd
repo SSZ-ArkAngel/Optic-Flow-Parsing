@@ -480,7 +480,7 @@ get_best_fitting_alpha <- function(data) {
   opt <- optimize(
     function(x) 
       my.summed_angular_squared_distance_between_predicted_and_perceived_absolute_tilt(alpha = x, data = data), 
-    lower = 0, upper = 1)
+    lower = -1, upper = 1) # EDIT
   
   return(opt$minimum)
 }
@@ -676,7 +676,6 @@ data %>%
 #        plot = last_plot(), path = "[file path here]", width = 12, height = 20)
 ```
 
-
 # UR Expo
 
 ## All
@@ -848,7 +847,7 @@ Same.Opposite %>%
   )
 
 # # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(Same vs. Opposite).png"),
+# ggsave(filename = "Same vs. Opposite.png",
 #        plot = last_plot(), path = "[file path here]")
 ```
 
@@ -891,9 +890,8 @@ top.bottom %<>%
   )
 
 # # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(probe top vs. probe bottom).png"),
+# ggsave(filename = "Full-top vs. Full-bottom.png",
 #        plot = last_plot(), path = "[file path here]")
-
 ```
 
 ### OF Top vs. OF Bottom
@@ -934,7 +932,7 @@ Top.Bottom %<>%
   )
 
 # # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(OF Top vs. OF Bottom).png"),
+# ggsave(filename = "OF Top vs. OF Bottom.png",
 #        plot = last_plot(), path = "[file path here]")
 ```
 
@@ -974,7 +972,7 @@ Same.comparison %<>%
   )
 
 # # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(Top-Top vs. Bottom-Bottom).png"),
+# ggsave(filename = "Top-Top vs. Bottom-Bottom.png",
 #        plot = last_plot(), path = "[file path here]")
 ```
 
@@ -983,7 +981,8 @@ $$CI = \overline{x} \pm z \times sd $$ (not using $$SE=\frac{s}{\sqrt{n}}$$!)
 
 ## Organize CI data.
 ```{r}
-CI <- read.csv(paste(dirname(getwd()), "/bootstrapped data/CI.csv", sep = ""))
+CI <- read.csv(paste(dirname(getwd()), "/bootstrapped data/CI.csv", sep = "")) # CI with constrained alpha
+# CI <- read.csv(paste(dirname(getwd()), "/bootstrapped data/CI_nonconstrained.csv", sep = "")) # CI with non-constrained alpha
 
 CI %<>%
   mutate(
@@ -1013,9 +1012,15 @@ bootstrap_data %<>%
   )
 ```
 
-
-
 ## Scatterplots *with CIs*
+
+Modify row names of CI dataframe.
+```{r}
+for (i in 1:nrow(CI)) {
+  # rownames(CI)[i] <- paste(CI$subject[i], paste(CI$condition[i], CI$probe_index[i], sep = "-"), sep = ", ")
+  rownames(CI)[i] <- paste(CI$subject[i], paste(substr(CI$condition[i],1,1), substr(CI$probe_index[i],1,1), sep = "-"), sep = ", ")
+}
+```
 
 ### Same vs. Opposite *with CIs*
 ```{r}
@@ -1027,13 +1032,20 @@ Same.Opposite %<>%
       CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$median_alpha,
     
     Opposite =
-      CI[(CI$condition == "Top" & CI$probe_index == "bottom") | (CI$condition == "Bottom" & CI$probe_index == "top"), ]$median_alpha
+      CI[(CI$condition == "Top" & CI$probe_index == "bottom") | (CI$condition == "Bottom" & CI$probe_index == "top"), ]$median_alpha,
+    
+    # retain info from CI dataframe
+    subject = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$subject,
+    row.names = rownames(CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ])
   )
 
 Same.Opposite %>%
   
-  ggplot(aes(x = Same, y = Opposite)) +
-  geom_point(colour = "blue", size = 2) +
+  ggplot(aes(x = Same, y = Opposite, label = row.names)) + # EDIT
+  geom_point(colour = Same.Opposite$subject, size = 2.5) +
+  
+  # ADDED
+  geom_text(aes(label = row.names, hjust = 0.5, vjust = -1), check_overlap = TRUE) +
   
   geom_errorbar(aes(ymin = CI[(CI$condition == "Top" & CI$probe_index == "bottom") | (CI$condition == "Bottom" & CI$probe_index == "top"), ]$lower,
                     ymax = CI[(CI$condition == "Top" & CI$probe_index == "bottom") | (CI$condition == "Bottom" & CI$probe_index == "top"), ]$upper)) +
@@ -1062,12 +1074,12 @@ Same.Opposite %>%
         aspect.ratio = 1 # ADDED
   )
 
-# # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(Same vs. Opposite) with CIs.png"),
-#        plot = last_plot(), path = "[file path here]")
+# save ggplot
+ggsave(filename = "Same vs. Opposite with CIs.png",
+       plot = last_plot(), path = "[file path here]")
 ```
 
-### probe top vs. probe bottom *with CIs*
+### Full-top vs. Full-bottom *with CIs*
 ```{r}
 top.bottom <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
 
@@ -1080,11 +1092,19 @@ top.bottom %<>%
     BT = CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$median_alpha,
     BB = CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$median_alpha,
     CT = CI[CI$condition == "Control" & CI$probe_index == "top", ]$median_alpha,
-    CB = CI[CI$condition == "Control" & CI$probe_index == "bottom", ]$median_alpha
-  ) %>%
+    CB = CI[CI$condition == "Control" & CI$probe_index == "bottom", ]$median_alpha,
+    
+    # retain info from CI dataframe
+    subject = CI[(CI$condition == "Full" & CI$probe_index == "top"), ]$subject,
+  )
+
+top.bottom %>%
+
+  ggplot(aes(x = FT, y = FB, label = subject)) +
+  geom_point(colour = top.bottom$subject, size = 3) +
   
-  ggplot(aes(x = FT, y = FB)) +
-  geom_point(colour = "blue", size = 2) +
+  # ADDED
+  geom_text(aes(label = subject, hjust = 2, vjust = 1.5), check_overlap = FALSE) +
   
   geom_errorbar(aes(ymin = CI[CI$condition == "Full" & CI$probe_index == "bottom", ]$lower, ymax = CI[CI$condition == "Full" & CI$probe_index == "bottom", ]$upper)) +
   
@@ -1111,47 +1131,35 @@ top.bottom %<>%
         aspect.ratio = 1 # ADDED
   )
 
-# # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(probe top vs. probe bottom) with CIs.png"),
-#        plot = last_plot(), path = "[file path here]")
+# save ggplot
+ggsave(filename = "Full-top vs. Full-bottom with CIs.png",
+       plot = last_plot(), path = "[file path here]")
 ```
 
 
 ### OF Top vs. OF Bottom *with CIs*
-
-Modify row names of CI dataframe.
-```{r}
-for (i in 1:nrow(CI)) {
-  rownames(CI)[i] <- paste(CI$subject[i], paste(CI$condition[i], CI$probe_index[i], sep = "-"), sep = ", ")
-}
-```
-
 ```{r fig.height=6, fig.width=15}
 Top.Bottom <- tibble(.rows = 2 * n_subjects) # empty table (2 * n_subjects) x n_conditions
 
 Top.Bottom %<>%
-  # mutate(
-  #   Top =
-  #     (bootstrap_data[bootstrap_data$condition == "Top" & bootstrap_data$probe_index == "top", 7:1006] +
-  #        bootstrap_data[bootstrap_data$condition == "Top" & bootstrap_data$probe_index == "bottom", 7:1006]) / 2,
-  # 
-  #   Bottom =
-  #     (bootstrap_data[bootstrap_data$condition == "Bottom" & bootstrap_data$probe_index == "top", 7:1006] +
-  #        bootstrap_data[bootstrap_data$condition == "Bottom" & bootstrap_data$probe_index == "bottom", 7:1006]) / 2
-  # ) %>%
-  
+
   mutate(
     Top =
-      CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ], # EDIT
+      CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]$median_alpha,
 
     Bottom =
-      CI[(CI$condition == "Bottom" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ] # EDIT
-  ) %>%
+      CI[(CI$condition == "Bottom" & CI$probe_index == "top") | (CI$condition == "Bottom" & CI$probe_index == "bottom"), ]$median_alpha,
+    
+    # retain info from CI dataframe
+    subject = CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]$subject,
+  )
+
+Top.Bottom %>%
   
-  ggplot(aes(x = Top$median_alpha, y = Bottom$median_alpha, 
+  ggplot(aes(x = Top, y = Bottom, 
              label = rownames(CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]))) + # EDIT
   
-  geom_point(colour = "blue", size = 2) +
+  geom_point(colour = Top.Bottom$subject, size = 3) +
   
   # ADDED
   geom_text(aes(label = rownames(CI[(CI$condition == "Top" & CI$probe_index == "top") | (CI$condition == "Top" & CI$probe_index == "bottom"), ]),
@@ -1187,9 +1195,9 @@ Top.Bottom %<>%
         # plot.subtitle = element_text(size = 10) # ADDED
   )
 
-# # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(OF Top vs. OF Bottom) with CIs.png"),
-#        plot = last_plot(), path = "[file path here]")
+# save ggplot
+ggsave(filename = "OF Top vs. OF Bottom with CIs.png",
+       plot = last_plot(), path = "[file path here]")
 ```
 
 ### Top-Top vs. Bottom-Bottom *with CIs*
@@ -1202,11 +1210,19 @@ Same.comparison %<>%
       CI[CI$condition == "Top" & CI$probe_index == "top", ]$median_alpha,
     
     Same.Bottom =
-      CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$median_alpha
-  ) %>%
+      CI[CI$condition == "Bottom" & CI$probe_index == "bottom", ]$median_alpha,
+    
+    # retain info from CI dataframe
+    subject = CI[(CI$condition == "Top" & CI$probe_index == "top"), ]$subject,
+  )
+
+Same.comparison %>%
   
-  ggplot(aes(x = Same.Bottom, y = Same.Top)) +
-  geom_point(colour = "blue", size = 2) +
+  ggplot(aes(x = Same.Bottom, y = Same.Top, label = subject)) +
+  geom_point(colour = Same.comparison$subject, size = 3) +
+  
+  # ADDED
+  geom_text(aes(label = subject, hjust = 0, vjust = -2), check_overlap = TRUE) +
   
   geom_errorbar(aes(ymin = CI[CI$condition == "Top" & CI$probe_index == "top", ]$lower,
                     ymax = CI[CI$condition == "Top" & CI$probe_index == "top", ]$upper)) +
@@ -1235,9 +1251,9 @@ Same.comparison %<>%
         aspect.ratio = 1 # ADDED
   )
 
-# # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(Top-Top vs. Bottom-Bottom) with CIs.png"),
-#        plot = last_plot(), path = "[file path here]")
+# save ggplot
+ggsave(filename = "Top-Top vs. Bottom-Bottom with CIs.png",
+       plot = last_plot(), path = "[file path here]")
 ```
 
 ### Top-bottom vs. Bottom-top *with CIs* [NEW!]
@@ -1250,13 +1266,19 @@ Opposite %<>%
       CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$median_alpha,
     
     Bottom_top =
-      CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$median_alpha
+      CI[CI$condition == "Bottom" & CI$probe_index == "top", ]$median_alpha,
+    
+    # retain info from CI dataframe
+    subject = CI[(CI$condition == "Top" & CI$probe_index == "bottom"), ]$subject
   )
 
 Opposite %>%
   
-  ggplot(aes(x = Bottom_top, y = Top_bottom)) +
-  geom_point(colour = "blue", size = 2) +
+  ggplot(aes(x = Bottom_top, y = Top_bottom, label = subject)) +
+  geom_point(colour = Opposite$subject, size = 3) +
+  
+  # ADDED
+  geom_text(aes(label = subject, hjust = 0, vjust = -2), check_overlap = TRUE) +
   
   geom_errorbar(aes(ymin = CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$lower,
                     ymax = CI[CI$condition == "Top" & CI$probe_index == "bottom", ]$upper)) +
@@ -1285,9 +1307,166 @@ Opposite %>%
         aspect.ratio = 1 # ADDED
   )
 
-# # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), "(Top-bottom vs. Bottom-top) with CIs.png"),
-#        plot = last_plot(), path = "[file path here]")
+# save ggplot
+ggsave(filename = "Top-bottom vs. Bottom-top with CIs.png",
+       plot = last_plot(), path = "[file path here]")
+```
+
+
+### Local top vs. Local bottom *with CIs* [NEW!]
+
+Organize dataframe
+```{r}
+local_data <- tibble(subject = numeric(0), local_effect = character(0), lower = numeric(0), median = numeric(0), upper = numeric(0))
+
+for(i in unique(bootstrap_data$subject)) {
+
+  # Top-Top - Top-bottom
+  Top.top = bootstrap_data %>%
+    filter(subject == i, condition == "Top", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Top.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Top", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  top = as.vector(Top.top - Top.bottom, mode = 'numeric')
+  top.lower = quantile(top, 0.025)
+  top.median = quantile(top, 0.5)
+  top.upper = quantile(top, 0.975)
+  
+  local_data %<>%
+    add_row(subject = i, local_effect = "top", lower = top.lower, median = top.median, upper = top.upper)
+  
+  # Bottom-bottom - Bottom-top
+  Bottom.top = bootstrap_data %>%
+    filter(subject == i, condition == "Bottom", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Bottom.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Bottom", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  bottom = as.vector(Bottom.top - Bottom.bottom, mode = 'numeric')
+  bottom.lower = quantile(bottom, 0.025)
+  bottom.median = quantile(bottom, 0.5)
+  bottom.upper = quantile(bottom, 0.975)
+  
+  local_data %<>%
+    add_row(subject = i, local_effect = "bottom", lower = bottom.lower, median = bottom.median, upper = bottom.upper)
+  
+  
+}
+```
+
+Plotting
+```{r}
+Local <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+Local %<>%
+  mutate(
+    Local_top = local_data[local_data$local_effect == "top", ]$median,
+    Local_bottom = local_data[local_data$local_effect == "bottom", ]$median,
+    
+    # retain info from local_data dataframe
+    subject = local_data[local_data$local_effect == "top", ]$subject
+  )
+
+Local %>%
+
+  ggplot(aes(x = Local_top, y = Local_bottom, label = subject)) +
+  geom_point(colour = Local$subject, size = 3) +
+  
+  # ADDED
+  geom_text(aes(label = subject, hjust = -0.5, vjust = -0.5), check_overlap = TRUE) +
+
+  geom_errorbar(aes(ymin = local_data[local_data$local_effect == "bottom" , ]$lower,
+                    ymax = local_data[local_data$local_effect == "bottom" , ]$upper)) +
+
+  geom_errorbarh(aes(xmin = local_data[local_data$local_effect == "top" , ]$lower,
+                     xmax = local_data[local_data$local_effect == "top" , ]$upper)) +
+
+  xlim(-0.6, 0.4) +
+  ylim(-0.6, 0.4) +
+  geom_abline() +
+  # geom_smooth(se = FALSE) + # regression line
+
+  # Add axis labels
+  xlab("Gain (probe top, optic flow bottom)") +
+  ylab("Gain (probe bottom, optic flow top)") +
+
+  # Add title
+  ggtitle("Best Fitting Gain for Opposite Flow/probe Locations", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
+  )
+
+# save ggplot
+ggsave(filename = "Local TOP vs. BOTTOM with CIs.png",
+       plot = last_plot(), path = "[file path here]")
+```
+
+
+### Control-top vs. Control-bottom *with CIs* [NEW!]
+```{r}
+Control <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+Control %<>%
+  mutate(
+    Control.top = 
+      CI[CI$condition == "Control" & CI$probe_index == "top", ]$median_alpha,
+    
+    Control.bottom =
+      CI[CI$condition == "Control" & CI$probe_index == "bottom", ]$median_alpha,
+    
+    # retain info from CI dataframe
+    subject = CI[(CI$condition == "Control" & CI$probe_index == "top"), ]$subject
+  )
+
+Control %>%
+  
+  ggplot(aes(x = Control.top, y = Control.bottom, label = subject)) +
+  geom_point(colour = Control$subject, size = 3) +
+    
+  # ADDED
+  geom_text(aes(label = subject, hjust = 0, vjust = -2), check_overlap = TRUE) +
+  
+  geom_errorbar(aes(ymin = CI[CI$condition == "Control" & CI$probe_index == "bottom", ]$lower,
+                    ymax = CI[CI$condition == "Control" & CI$probe_index == "bottom", ]$upper)) +
+  
+  geom_errorbarh(aes(xmin = CI[CI$condition == "Control" & CI$probe_index == "top", ]$lower,
+                     xmax = CI[CI$condition == "Control" & CI$probe_index == "top", ]$upper)) +
+  
+  xlim(0, 0.09) +
+  ylim(0, 0.09) +
+  geom_abline() +
+  # geom_smooth(se = FALSE) + # regression line
+  
+  # Add axis labels
+  xlab("Gain (probe top, optic flow bottom)") +    
+  ylab("Gain (probe bottom, optic flow top)") +
+  
+  # Add title
+  ggtitle("Best Fitting Gain for Opposite Flow/probe Locations", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
+  )
+
+# save ggplot
+ggsave(filename = "Control-top vs. Control-bottom with CIs.png",
+       plot = last_plot(), path = "[file path here]")
 ```
 
 ## Paired t-test
