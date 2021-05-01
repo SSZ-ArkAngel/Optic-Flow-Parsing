@@ -1489,6 +1489,35 @@ Control %>%
 ```
 
 
+# Final presentation prep
+
+## To show PIs
+
+Maximum gain for Control condition.
+```{r}
+data_Control <- data[data$condition == "Control", ]
+
+data_Control %>%
+  filter(alpha == max(data_Control$alpha)) %>% # subject with max gain
+
+  ggplot(aes(x = abs_tilt, y = probe_angle)) +
+  geom_point(colour = "grey50") +
+  
+  # set x-axis scale
+  scale_x_continuous(breaks = c(0, 45, 90, 135, 180, 225, 270, 315, 360)) +
+  
+  # geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 90, lty = 2) +
+  geom_vline(xintercept = 270, lty = 2) +
+  
+  xlab("Absolute tilt (deg)") +    
+  ylab("Reported tilt (deg)") +
+
+  # Add title
+  ggtitle("Reported vs. Actual direction of motion", subtitle = paste("Subject", unique(data_Control[data_Control$alpha == max(data_Control$alpha), ]$subject)))
+```
+
+
 ## Paired t-test
 - No significance --> compare Top-Top vs. Bottom-Bottom
 - Significance --> ???
