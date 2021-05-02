@@ -65,7 +65,7 @@ n_subjects <- length(unique(data$subject))
 
 ## Hyperparameters
 ```{r}
-select_subject <- 4
+select_subject <- 3
 select_cond <- "Full"
 select_probe <- "bottom"
 ```
@@ -330,6 +330,10 @@ data_raw %>%
   # Separate by subject
   facet_wrap(~subject, scales = "free_y", labeller = label_both) +
   
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  
   # Add axis labels
   xlab("Probe Direction (deg)") +    
   ylab("Perceived probe direction (deg)") +
@@ -367,6 +371,10 @@ data_raw_subject %>%
   
   # Separate by condition
   facet_wrap(~condition, scales = "free_y") +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
 
   # Add axis labels
   xlab("Probe Direction (deg)") +    
@@ -576,6 +584,10 @@ data_gain %>%
   
   # # Separate by condition
   # facet_wrap(~condition, scales = "free_y") +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 45, 90, 135, 180, 225, 270, 315, 360)) +
+  scale_x_continuous(breaks = c(0, 45, 90, 135, 180, 225, 270, 315, 360)) +
 
   # Add axis labels
   xlab("Probe Angle (deg)") +    
@@ -658,6 +670,10 @@ data %>%
   # plots of subjects for each unique condition
   facet_grid(subject + probe_index ~ condition, labeller = labeller(subject = label_both)) +
 
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  
   # Add axis labels
   xlab("Probe Angle (deg)") +    
   ylab("Actual and Predicted Response (deg)") +
@@ -720,6 +736,10 @@ data %>%
 
   # plots of subjects for each unique condition
   facet_grid(subject + probe_index ~ condition, labeller = labeller(subject = label_both)) +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
 
   # Add axis labels
   xlab("Probe Angle (deg)") +    
@@ -775,8 +795,9 @@ data %>%
   # plots of 1 subject for each unique condition
   facet_grid(probe_index ~ condition) +
   
-  # set x-axis scale
-  scale_x_continuous(breaks = c(0, 90, 180, 360)) +
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
 
   # Add axis labels
   xlab("Probe Angle (deg)") +    
@@ -1503,9 +1524,11 @@ data_Control %>%
   ggplot(aes(x = abs_tilt, y = probe_angle)) +
   geom_point(colour = "grey50") +
   
-  # set x-axis scale
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 45, 90, 135, 180, 225, 270, 315, 360)) +
   scale_x_continuous(breaks = c(0, 45, 90, 135, 180, 225, 270, 315, 360)) +
   
+  geom_abline() +
   # geom_hline(yintercept = 0, lty = 2) +
   geom_vline(xintercept = 90, lty = 2) +
   geom_vline(xintercept = 270, lty = 2) +
@@ -1514,7 +1537,15 @@ data_Control %>%
   ylab("Reported tilt (deg)") +
 
   # Add title
-  ggtitle("Reported vs. Actual direction of motion", subtitle = paste("Subject", unique(data_Control[data_Control$alpha == max(data_Control$alpha), ]$subject)))
+  ggtitle("Reported vs. Actual direction of motion", subtitle = paste("Subject", unique(data_Control[data_Control$alpha == max(data_Control$alpha), ]$subject))) +
+  
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
+  )
 ```
 
 
