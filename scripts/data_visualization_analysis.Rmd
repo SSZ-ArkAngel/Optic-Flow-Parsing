@@ -1088,7 +1088,7 @@ Same.Opposite %>%
   ylab("Gain (same hemifield)") +
   
   # Add title
-  ggtitle("Accuracy of Report based on Optic flow/Probe Location", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Accuracy of Report based on Optic flow/Probe Location") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1147,7 +1147,7 @@ top.bottom %>%
   ylab("Gain (probe top, optic flow full)") +
   
   # Add title
-  ggtitle("Relative Strength of Local Mechanisms in Vertical Hemifields", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Relative Strength of Local Mechanisms in Vertical Hemifields") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1212,7 +1212,7 @@ Top.Bottom %>%
   ylab("Gain when optic flow in upper hemifield") +
   
   # Add title
-  ggtitle("Best Fitting Gain for Optic Flow in Top vs. Bottom", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Best Fitting Gain for Optic Flow in Top vs. Bottom") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1272,7 +1272,7 @@ Same.comparison %>%
   ylab("Gain (probe top, optic flow top)") +
   
   # Add title
-  ggtitle("Accuracy of Report for Same Flow/probe Locations", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Accuracy of Report for Same Flow/probe Locations") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1332,7 +1332,7 @@ Opposite %>%
   ylab("Gain (probe top, optic flow bottom)") +
   
   # Add title
-  ggtitle("Accuracy of Report for Opposite Flow/probe Locations", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Accuracy of Report for Opposite Flow/probe Locations") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1433,7 +1433,7 @@ Local %>%
   ylab("Gain (Top-top - Top-bottom)") +
 
   # Add title
-  ggtitle("Strength of Local Mechanisms in Vertical Hemifields", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Strength of Local Mechanisms in Vertical Hemifields") +
 
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1535,7 +1535,7 @@ Global %>%
   ylab("Gain (Full-top - Top-top)") +
 
   # Add title
-  ggtitle("Strength of Global Mechanisms in Vertical Hemifields", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Strength of Global Mechanisms in Vertical Hemifields") +
 
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1595,7 +1595,7 @@ Control %>%
   ylab("Gain (probe top, no optic flow)") +
   
   # Add title
-  ggtitle("Accuracy of Report with No Optic Flow", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Accuracy of Report with No Optic Flow") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
