@@ -1101,7 +1101,7 @@ Same.Opposite %>%
 
 # # save ggplot
 # ggsave(filename = "Same vs. Opposite with CIs.png",
-#        plot = last_plot(), path = "[file path here]")
+#        plot = last_plot(), path = "")
 ```
 
 ### Full-top vs. Full-bottom *with CIs*
@@ -1147,13 +1147,13 @@ top.bottom %>%
   ylab("Gain (probe top, optic flow full)") +
   
   # Add title
-  ggtitle("Strength of Local Mechanisms in Vertical Hemifields", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+  ggtitle("Relative Strength of Local Mechanisms in Vertical Hemifields", subtitle = paste("with bootstrapping. N =", n_subjects)) +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 12),
-        legend.text = element_text(size = 10),
+        text = element_text(size = 10),
+        legend.text = element_text(size = 9),
         legend.position = "none",
         aspect.ratio = 1 # ADDED
   )
@@ -1449,6 +1449,108 @@ Local %>%
 #        plot = last_plot(), path = "[file path here]")
 ```
 
+
+### Global top vs. Global bottom *with CIs* [NEW!]
+
+Organize data frame.
+```{r}
+global_data <- tibble(subject = numeric(0), global_effect = character(0), lower = numeric(0), median = numeric(0), upper = numeric(0))
+
+for(i in unique(bootstrap_data$subject)) {
+
+  # Top-Top - Top-bottom
+  Top.top = bootstrap_data %>%
+    filter(subject == i, condition == "Top", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Full.top = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  top = as.vector(Full.top - Top.top, mode = 'numeric')
+  top.lower = quantile(top, 0.025)
+  top.median = quantile(top, 0.5)
+  top.upper = quantile(top, 0.975)
+  
+  global_data %<>%
+    add_row(subject = i, global_effect = "top", lower = top.lower, median = top.median, upper = top.upper)
+  
+  # Bottom-bottom - Bottom-top
+  Full.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  Bottom.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Bottom", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  bottom = as.vector(Full.bottom - Bottom.bottom, mode = 'numeric')
+  bottom.lower = quantile(bottom, 0.025)
+  bottom.median = quantile(bottom, 0.5)
+  bottom.upper = quantile(bottom, 0.975)
+  
+  global_data %<>%
+    add_row(subject = i, global_effect = "bottom", lower = bottom.lower, median = bottom.median, upper = bottom.upper)
+}
+```
+
+Plotting
+```{r}
+Global <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+Global %<>%
+  mutate(
+    Global_top = global_data[global_data$global_effect == "top", ]$median,
+    Global_bottom = global_data[global_data$global_effect == "bottom", ]$median,
+    
+    # retain info from local_data dataframe
+    subject = global_data[global_data$global_effect == "top", ]$subject
+  )
+
+Global %>%
+
+  ggplot(aes(x = Global_bottom, y = Global_top, label = subject)) +
+  geom_point(colour = Local$subject, size = 2) +
+  
+  # ADDED
+  geom_text(aes(label = subject, hjust = 1, vjust = 3), check_overlap = FALSE) +
+
+  geom_errorbar(aes(ymin = global_data[global_data$global_effect == "top" , ]$lower,
+                    ymax = global_data[global_data$global_effect == "top" , ]$upper)) +
+
+  geom_errorbarh(aes(xmin = global_data[global_data$global_effect == "bottom" , ]$lower,
+                     xmax = global_data[global_data$global_effect == "bottom" , ]$upper)) +
+
+  xlim(-0.13, 0.13) +
+  ylim(-0.13, 0.13) +
+  
+  geom_abline() +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  
+  # geom_smooth(se = FALSE) + # regression line
+
+  # Add axis labels
+  xlab("Gain (Full-bottom - Bottom-bottom)") +
+  ylab("Gain (Full-top - Top-top)") +
+
+  # Add title
+  ggtitle("Strength of Global Mechanisms in Vertical Hemifields", subtitle = paste("with bootstrapping. N =", n_subjects)) +
+
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
+  )
+
+# # save ggplot
+# ggsave(filename = "Global TOP vs. BOTTOM with CIs.png",
+#        plot = last_plot(), path = "[file path here]")
+```
+
 ### Control-top vs. Control-bottom *with CIs* [NEW!]
 ```{r}
 Control <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
@@ -1537,7 +1639,8 @@ data_Control %>%
   ylab("Reported tilt (deg)") +
 
   # Add title
-  ggtitle("Reported vs. Actual direction of motion", subtitle = paste("Subject", unique(data_Control[data_Control$alpha == max(data_Control$alpha), ]$subject))) +
+  ggtitle("Reported vs. Actual direction of motion", subtitle = paste(paste("Subject", unique(data_Control[data_Control$alpha == max(data_Control$alpha), ]$subject),
+                                                                      paste("Probe ", unique(data_Control[data_Control$alpha == max(data_Control$alpha), ]$probe_index))))) +
   
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
