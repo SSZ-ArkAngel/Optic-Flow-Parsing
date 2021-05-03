@@ -1101,7 +1101,7 @@ Same.Opposite %>%
 
 # # save ggplot
 # ggsave(filename = "Same vs. Opposite with CIs.png",
-#        plot = last_plot(), path = "")
+#        plot = last_plot(), path = "[file path here]")
 ```
 
 ### Full-top vs. Full-bottom *with CIs*
@@ -1147,13 +1147,13 @@ top.bottom %>%
   ylab("Gain (probe top, optic flow full)") +
   
   # Add title
-  ggtitle("Relative Strength of Local Mechanisms in Vertical Hemifields") +
+  ggtitle("Relative Strength of Flow Parsing between Vertical Hemifields") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 10),
-        legend.text = element_text(size = 9),
+        text = element_text(size = 11),
+        legend.text = element_text(size = 10),
         legend.position = "none",
         aspect.ratio = 1 # ADDED
   )
@@ -1350,7 +1350,7 @@ Opposite %>%
 
 ### Local top vs. Local bottom *with CIs* [NEW!]
 
-Organize data frame.
+Organize data frame #1
 ```{r}
 local_data <- tibble(subject = numeric(0), local_effect = character(0), lower = numeric(0), median = numeric(0), upper = numeric(0))
 
@@ -1392,6 +1392,64 @@ for(i in unique(bootstrap_data$subject)) {
 }
 ```
 
+Organize data frame #2
+```{r}
+local_data <- tibble(subject = numeric(0), local_effect = character(0), lower = numeric(0), median = numeric(0), upper = numeric(0))
+
+for(i in unique(bootstrap_data$subject)) {
+
+  # Local top
+  Full.top = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "top") %>%
+    subset(select = c(7:1006))
+
+  Bottom.top = bootstrap_data %>%
+    filter(subject == i, condition == "Bottom", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Full.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  Bottom.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Bottom", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  top = as.vector((Full.top - Bottom.top) - (Full.bottom - Bottom.bottom), mode = 'numeric')
+  top.lower = quantile(top, 0.025)
+  top.median = quantile(top, 0.5)
+  top.upper = quantile(top, 0.975)
+  
+  local_data %<>%
+    add_row(subject = i, local_effect = "top", lower = top.lower, median = top.median, upper = top.upper)
+  
+  # Local bottom
+  Full.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  Top.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Top", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  Full.top = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Top.top = bootstrap_data %>%
+    filter(subject == i, condition == "Top", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  bottom = as.vector((Full.bottom - Top.bottom) - (Full.top - Top.top), mode = 'numeric')
+  bottom.lower = quantile(bottom, 0.025)
+  bottom.median = quantile(bottom, 0.5)
+  bottom.upper = quantile(bottom, 0.975)
+  
+  local_data %<>%
+    add_row(subject = i, local_effect = "bottom", lower = bottom.lower, median = bottom.median, upper = bottom.upper)
+}
+```
+
 Plotting
 ```{r}
 Local <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
@@ -1419,21 +1477,21 @@ Local %>%
   geom_errorbarh(aes(xmin = local_data[local_data$local_effect == "bottom" , ]$lower,
                      xmax = local_data[local_data$local_effect == "bottom" , ]$upper)) +
 
-  xlim(-0.05, 0.45) +
-  ylim(-0.05, 0.45) +
+  xlim(0, 0.46) +
+  ylim(0, 0.46) +
   
   geom_abline() +
-  geom_hline(yintercept = 0, lty = 2) +
-  geom_vline(xintercept = 0, lty = 2) +
+  # geom_hline(yintercept = 0, lty = 2) +
+  # geom_vline(xintercept = 0, lty = 2) +
   
   # geom_smooth(se = FALSE) + # regression line
 
   # Add axis labels
-  xlab("Gain (Bottom-bottom - Bottom-top)") +
-  ylab("Gain (Top-top - Top-bottom)") +
+  xlab("Gain local bottom") +
+  ylab("Gain local top") +
 
   # Add title
-  ggtitle("Strength of Local Mechanisms in Vertical Hemifields") +
+  ggtitle("Strength Local Mechanisms in Vertical Hemifields") +
 
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1450,32 +1508,15 @@ Local %>%
 ```
 
 
-### Global top vs. Global bottom *with CIs* [NEW!]
+### Global (self) top vs. Global (self) bottom *with CIs* [NEW!]
 
 Organize data frame.
 ```{r}
-global_data <- tibble(subject = numeric(0), global_effect = character(0), lower = numeric(0), median = numeric(0), upper = numeric(0))
+global_self_data <- tibble(subject = numeric(0), global_effect = character(0), lower = numeric(0), median = numeric(0), upper = numeric(0))
 
 for(i in unique(bootstrap_data$subject)) {
 
-  # Top-Top - Top-bottom
-  Top.top = bootstrap_data %>%
-    filter(subject == i, condition == "Top", probe_index == "top") %>%
-    subset(select = c(7:1006))
-  
-  Full.top = bootstrap_data %>%
-    filter(subject == i, condition == "Full", probe_index == "top") %>%
-    subset(select = c(7:1006))
-  
-  top = as.vector(Full.top - Top.top, mode = 'numeric')
-  top.lower = quantile(top, 0.025)
-  top.median = quantile(top, 0.5)
-  top.upper = quantile(top, 0.975)
-  
-  global_data %<>%
-    add_row(subject = i, global_effect = "top", lower = top.lower, median = top.median, upper = top.upper)
-  
-  # Bottom-bottom - Bottom-top
+  # Global (self) top
   Full.bottom = bootstrap_data %>%
     filter(subject == i, condition == "Full", probe_index == "bottom") %>%
     subset(select = c(7:1006))
@@ -1484,12 +1525,29 @@ for(i in unique(bootstrap_data$subject)) {
     filter(subject == i, condition == "Bottom", probe_index == "bottom") %>%
     subset(select = c(7:1006))
   
-  bottom = as.vector(Full.bottom - Bottom.bottom, mode = 'numeric')
+  top = as.vector(Full.bottom - Bottom.bottom, mode = 'numeric')
+  top.lower = quantile(top, 0.025)
+  top.median = quantile(top, 0.5)
+  top.upper = quantile(top, 0.975)
+  
+  global_self_data %<>%
+    add_row(subject = i, global_effect = "top", lower = top.lower, median = top.median, upper = top.upper)
+  
+  # Global (self) bottom
+  Full.top = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Top.top = bootstrap_data %>%
+    filter(subject == i, condition == "Top", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  bottom = as.vector(Full.top - Top.top, mode = 'numeric')
   bottom.lower = quantile(bottom, 0.025)
   bottom.median = quantile(bottom, 0.5)
   bottom.upper = quantile(bottom, 0.975)
   
-  global_data %<>%
+  global_self_data %<>%
     add_row(subject = i, global_effect = "bottom", lower = bottom.lower, median = bottom.median, upper = bottom.upper)
 }
 ```
@@ -1500,11 +1558,11 @@ Global <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
 
 Global %<>%
   mutate(
-    Global_top = global_data[global_data$global_effect == "top", ]$median,
-    Global_bottom = global_data[global_data$global_effect == "bottom", ]$median,
+    Global_top = global_self_data[global_self_data$global_effect == "top", ]$median,
+    Global_bottom = global_self_data[global_self_data$global_effect == "bottom", ]$median,
     
     # retain info from local_data dataframe
-    subject = global_data[global_data$global_effect == "top", ]$subject
+    subject = global_self_data[global_self_data$global_effect == "top", ]$subject
   )
 
 Global %>%
@@ -1515,11 +1573,11 @@ Global %>%
   # ADDED
   geom_text(aes(label = subject, hjust = 1, vjust = 3), check_overlap = FALSE) +
 
-  geom_errorbar(aes(ymin = global_data[global_data$global_effect == "top" , ]$lower,
-                    ymax = global_data[global_data$global_effect == "top" , ]$upper)) +
+  geom_errorbar(aes(ymin = global_self_data[global_self_data$global_effect == "top" , ]$lower,
+                    ymax = global_self_data[global_self_data$global_effect == "top" , ]$upper)) +
 
-  geom_errorbarh(aes(xmin = global_data[global_data$global_effect == "bottom" , ]$lower,
-                     xmax = global_data[global_data$global_effect == "bottom" , ]$upper)) +
+  geom_errorbarh(aes(xmin = global_self_data[global_self_data$global_effect == "bottom" , ]$lower,
+                     xmax = global_self_data[global_self_data$global_effect == "bottom" , ]$upper)) +
 
   xlim(-0.13, 0.13) +
   ylim(-0.13, 0.13) +
@@ -1531,8 +1589,8 @@ Global %>%
   # geom_smooth(se = FALSE) + # regression line
 
   # Add axis labels
-  xlab("Gain (Full-bottom - Bottom-bottom)") +
-  ylab("Gain (Full-top - Top-top)") +
+  xlab("Gain global bottom") +
+  ylab("Gain global top") +
 
   # Add title
   ggtitle("Strength of Global Mechanisms in Vertical Hemifields") +
@@ -1547,7 +1605,125 @@ Global %>%
   )
 
 # # save ggplot
-# ggsave(filename = "Global TOP vs. BOTTOM with CIs.png",
+# ggsave(filename = "Global self TOP vs. BOTTOM with CIs.png",
+#        plot = last_plot(), path = "[file path here]")
+```
+
+
+### Global (obj) top vs. Global (obj) bottom *with CIs* [NEW!]
+
+Organize data frame.
+```{r}
+global_obj_data <- tibble(subject = numeric(0), global_effect = character(0), lower = numeric(0), median = numeric(0), upper = numeric(0))
+
+for(i in unique(bootstrap_data$subject)) {
+
+  Full.top = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Top.top = bootstrap_data %>%
+    filter(subject == i, condition == "Top", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Full.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Full", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  Bottom.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Bottom", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  Top.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Top", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  Control.bottom = bootstrap_data %>%
+    filter(subject == i, condition == "Control", probe_index == "bottom") %>%
+    subset(select = c(7:1006))
+  
+  Bottom.top = bootstrap_data %>%
+    filter(subject == i, condition == "Bottom", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  Control.top = bootstrap_data %>%
+    filter(subject == i, condition == "Control", probe_index == "top") %>%
+    subset(select = c(7:1006))
+  
+  # Global (obj) top
+  top = as.vector((Bottom.top - Control.top) - (Full.top - Top.top), mode = 'numeric')
+  top.lower = quantile(top, 0.025)
+  top.median = quantile(top, 0.5)
+  top.upper = quantile(top, 0.975)
+  
+  global_obj_data %<>%
+    add_row(subject = i, global_effect = "top", lower = top.lower, median = top.median, upper = top.upper)
+  
+  # Global (obj) bottom
+  bottom = as.vector((Top.bottom - Control.bottom) - (Full.bottom - Bottom.bottom), mode = 'numeric')
+  bottom.lower = quantile(bottom, 0.025)
+  bottom.median = quantile(bottom, 0.5)
+  bottom.upper = quantile(bottom, 0.975)
+  
+  global_obj_data %<>%
+    add_row(subject = i, global_effect = "bottom", lower = bottom.lower, median = bottom.median, upper = bottom.upper)
+}
+```
+
+Plotting
+```{r}
+Global <- tibble(.rows = n_subjects) # empty table n_subjects x n_conditions
+
+Global %<>%
+  mutate(
+    Global_top = global_obj_data[global_obj_data$global_effect == "top", ]$median,
+    Global_bottom = global_obj_data[global_obj_data$global_effect == "bottom", ]$median,
+    
+    # retain info from local_data dataframe
+    subject = global_obj_data[global_obj_data$global_effect == "top", ]$subject
+  )
+
+Global %>%
+
+  ggplot(aes(x = Global_bottom, y = Global_top, label = subject)) +
+  geom_point(colour = Local$subject, size = 2) +
+  
+  # ADDED
+  geom_text(aes(label = subject, hjust = 1, vjust = 3), check_overlap = FALSE) +
+
+  geom_errorbar(aes(ymin = global_obj_data[global_obj_data$global_effect == "top" , ]$lower,
+                    ymax = global_obj_data[global_obj_data$global_effect == "top" , ]$upper)) +
+
+  geom_errorbarh(aes(xmin = global_obj_data[global_obj_data$global_effect == "bottom" , ]$lower,
+                     xmax = global_obj_data[global_obj_data$global_effect == "bottom" , ]$upper)) +
+
+  xlim(-0.07, 0.26) +
+  ylim(-0.07, 0.26) +
+  
+  geom_abline() +
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  
+  # geom_smooth(se = FALSE) + # regression line
+
+  # Add axis labels
+  xlab("Gain global bottom") +
+  ylab("Gain global top") +
+
+  # Add title
+  ggtitle("Strength of Global Mechanisms in Vertical Hemifields") +
+
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        legend.position = "none",
+        aspect.ratio = 1 # ADDED
+  )
+
+# # save ggplot
+# ggsave(filename = "Global obj TOP vs. BOTTOM with CIs.png",
 #        plot = last_plot(), path = "[file path here]")
 ```
 
@@ -1570,7 +1746,7 @@ Control %<>%
 Control %>%
   
   ggplot(aes(x = Control.bottom, y = Control.top, label = subject)) +
-  geom_point(colour = Control$subject, size = 3) +
+  geom_point(colour = Control$subject, size = 2) +
     
   # ADDED
   geom_text(aes(label = subject, hjust = 1.5, vjust = -1), check_overlap = FALSE) +
@@ -1595,12 +1771,12 @@ Control %>%
   ylab("Gain (probe top, no optic flow)") +
   
   # Add title
-  ggtitle("Accuracy of Report with No Optic Flow") +
+  ggtitle("Relative Strength of Flow Parsing between Vertical Hemifields") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 12),
+        text = element_text(size = 11),
         legend.text = element_text(size = 10),
         legend.position = "none",
         aspect.ratio = 1 # ADDED
@@ -1613,6 +1789,13 @@ Control %>%
 
 
 # Final presentation prep
+
+## Hyperparameters
+```{r}
+select_subject <- 4
+select_cond <- "Full"
+select_probe <- "top"
+```
 
 ## To show PIs
 
@@ -1649,6 +1832,323 @@ data_Control %>%
         legend.position = "none",
         aspect.ratio = 1 # ADDED
   )
+```
+
+
+## Raw plot (N=1) - no color
+```{r}
+# rename 'data' to avoid confusion
+data_raw_subject <- data
+
+data_raw_subject %>%
+  
+  filter(subject == select_subject, condition == select_cond) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = probe_index)) + # shape = 
+  
+  geom_point() +
+  
+  geom_abline() +
+  
+  # # Separate by condition
+  # facet_wrap(~condition, scales = "free_y") +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
+
+  # Add axis labels
+  xlab("Actual Probe Direction (deg)") +    
+  ylab("Perceived Probe direction (deg)") +
+  
+  # Add title
+  ggtitle("Perceived vs. Actual direction of motion", 
+          subtitle = paste(paste(paste(paste("Subject", select_subject), select_cond, sep = ", ")), "optic flow")) +
+  
+  # Legend title
+  guides(colour = guide_legend("Probe location")) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        aspect.ratio = 1
+        )
+ 
+# # save plot
+# ggsave(filename = paste(paste("Subject", select_subject), "raw.png"), plot = last_plot(), path = "[file path here]")
+```
+
+
+## Prediction plot (N=1) - raw data
+```{r}
+data %>%
+  
+  filter(subject == select_subject, condition == select_cond, probe_index == select_probe) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt)) + # shape = 
+  
+  geom_point(color = "grey40", alpha = .4) +
+  
+  geom_abline() +
+  
+  # # Separate by condition
+  # facet_wrap(~condition, scales = "free_y") +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
+
+  # Add axis labels
+  xlab("Actual Probe Direction (deg)") +    
+  ylab("Perceived Probe direction (deg)") +
+  
+  # Add title
+  ggtitle("Perceived vs. Actual direction of motion", 
+          subtitle = paste(paste(paste(paste(paste(paste("Subject", select_subject), select_cond, sep = ", ")), "optic flow"), "probe", sep = ", "), select_probe)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        aspect.ratio = 1 # makes axes ratio 1:1
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("1 Subject", select_subject), ".png", sep = ""),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+## Prediction plots (N=1) - raw data + gain
+```{r}
+data %>%
+  filter(subject == select_subject, condition == select_cond, probe_index == select_probe) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
+  
+  geom_point(alpha = .4) +
+  geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain"), linetype = "solid", alpha = 2, se = FALSE) +
+  
+  geom_abline() +
+  
+  geom_text(
+    data = ~ .x %>%
+      select(alpha) %>%
+      distinct(),
+    aes(label = paste("Gain:", alpha)),
+    x = 0,
+    y = 360,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    name = "Raw data & Gain",
+    breaks = c("data", "best fitting gain"),
+    values = c("grey50", "red"),
+    drop = TRUE
+  ) +
+  
+  # tidy up legend aesthetics
+  # guides(color = guide_legend(override.aes = list(fill = NA, shape = c(19, NA), linetype = c("blank", "solid")))) +
+
+  # # plots of 1 subject for each unique condition
+  # facet_grid(probe_index ~ condition) +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
+
+  # Add axis labels
+  xlab("Actual Probe Direction (deg)") +    
+  ylab("Perceived Probe direction (deg)") +
+  
+  # Add title
+  ggtitle("Perceived vs. Actual direction of motion", 
+          subtitle = paste(paste(paste(paste(paste(paste("Subject", select_subject), select_cond, sep = ", ")), "optic flow"), "probe", sep = ", "), select_probe)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        aspect.ratio = 1 # makes axes ratio 1:1
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("2 Subject", select_subject), ".png", sep = ""),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+## Prediction plots (N=1) - raw data + 3 gains
+```{r}
+data %>%
+
+  filter(subject == select_subject, condition == select_cond, probe_index == select_probe) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
+  
+  geom_point(alpha = .4) +
+  geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain")) +
+  
+  geom_point(aes(y = 
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 0), colour = "gain = 0")) +
+  
+  geom_point(aes(y = 
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 1), colour = "gain = 1")) +
+
+  geom_abline() +
+
+  geom_text(
+    data = ~ .x %>%
+      select(alpha) %>%
+      distinct(),
+    aes(label = paste("Best fitting gain:", alpha)),
+    x = 0,
+    y = 360,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    name = "Raw data & Gain",
+    breaks = c("data", "best fitting gain", "gain = 0", "gain = 1"),
+    values = c("grey50", "red", "skyblue2", "green2"),
+    drop = TRUE
+  ) +
+  
+  # tidy up legend aesthetics
+  # guides(color = guide_legend(override.aes = list(fill = NA, shape = c(19, NA), linetype = c("blank", "solid")))) +
+
+  # # plots of 1 subject for each unique condition
+  # facet_grid(probe_index ~ condition) +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
+
+  # Add axis labels
+  xlab("Actual Probe Direction (deg)") +    
+  ylab("Perceived Probe direction (deg)") +
+  
+  # Add title
+  ggtitle("Perceived vs. Actual direction of motion", 
+          subtitle = paste(paste(paste(paste(paste(paste("Subject", select_subject), select_cond, sep = ", ")), "optic flow"), "probe", sep = ", "), select_probe)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        aspect.ratio = 1 # makes axes ratio 1:1
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("3 Subject", select_subject), ".png", sep = ""),
+#        plot = last_plot(), path = "[file path here]")
+```
+
+## Prediction plots (N=1) - raw data + 4 gains
+```{r}
+data %>%
+
+  filter(subject == select_subject, condition == select_cond, probe_index == select_probe) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
+  
+  geom_point(alpha = .4) +
+  geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain")) +
+  
+  geom_point(aes(y = 
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 0), colour = "gain = 0")) +
+  
+  geom_point(aes(y = 
+                    predicted_absolute_tilt(
+                      probe.x,
+                      probe.y,
+                      flow.x,
+                      flow.y,
+                      alpha = 1), colour = "gain = 1")) +
+
+  geom_point(aes(y = 
+                   predicted_absolute_tilt(
+                     probe.x,
+                     probe.y,
+                     flow.x,
+                     flow.y,
+                     alpha = 0.6), colour = "gain = 0.6")) +
+  
+  geom_abline() +
+
+  geom_text(
+    data = ~ .x %>%
+      select(alpha) %>%
+      distinct(),
+    aes(label = paste("Best fitting gain:", alpha)),
+    x = 0,
+    y = 360,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    name = "Raw data & Gain",
+    breaks = c("data", "best fitting gain", "gain = 0", "gain = 1", "gain = 0.6"),
+    values = c("grey50", "red", "skyblue2", "green2", "orange1"),
+    drop = TRUE
+  ) +
+  
+  # tidy up legend aesthetics
+  # guides(color = guide_legend(override.aes = list(fill = NA, shape = c(19, NA), linetype = c("blank", "solid")))) +
+
+  # # plots of 1 subject for each unique condition
+  # facet_grid(probe_index ~ condition) +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
+
+  # Add axis labels
+  xlab("Actual Probe Direction (deg)") +    
+  ylab("Perceived Probe direction (deg)") +
+  
+  # Add title
+  ggtitle("Perceived vs. Actual direction of motion", 
+          subtitle = paste(paste(paste(paste(paste(paste("Subject", select_subject), select_cond, sep = ", ")), "optic flow"), "probe", sep = ", "), select_probe)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        aspect.ratio = 1 # makes axes ratio 1:1
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("4 Subject", select_subject), ".png", sep = ""),
+#        plot = last_plot(), path = "[file path here]")
 ```
 
 
