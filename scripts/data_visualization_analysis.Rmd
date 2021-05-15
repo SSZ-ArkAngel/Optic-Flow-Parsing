@@ -1462,8 +1462,8 @@ Opposite %>%
   # geom_smooth(se = FALSE) + # regression line
   
   # Add axis labels
-  xlab(TeX("Gain F_{Top} P_{Bottom}")) +    
-  ylab(TeX("Gain F_{Bottom} P_{Top}")) +
+  xlab(TeX("Gain F_{Bottom} P_{Top}")) +    
+  ylab(TeX("Gain F_{Top} P_{Bottom}")) +
   
   # Add title
   ggtitle("Relative Strength of Flow Parsing for Opposite Conditions") +
