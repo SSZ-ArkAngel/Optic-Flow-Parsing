@@ -65,9 +65,9 @@ n_subjects <- length(unique(data$subject))
 
 ## Hyperparameters
 ```{r}
-select_subject <- 3
+select_subject <- 4
 select_cond <- "Full"
-select_probe <- "bottom"
+select_probe <- "top"
 ```
 
 ## Organize data
@@ -766,10 +766,11 @@ data %>%
   # group_by(condition, probe_index) %>%
   ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
   
-  geom_point(alpha = .4) +
   geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain"), linetype = "solid", alpha = 2, se = FALSE) +
   
   geom_abline() +
+  
+  geom_point(alpha = .4) +
   
   geom_text(
     data = ~ .x %>%
@@ -804,7 +805,7 @@ data %>%
   ylab("Actual and Predicted Response (deg)") +
   
   # # Add title
-  ggtitle("Perceived vs. Actual direction of motion", subtitle = paste("Subject", select_subject)) +
+  # ggtitle("Perceived vs. Actual direction of motion", subtitle = paste("Subject", select_subject)) +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -815,7 +816,7 @@ data %>%
   )
 
 # # save ggplot
-# ggsave(filename = paste(paste("Subject", select_subject), ".png", sep = ""),
+# ggsave(filename = paste(paste("Subject", select_subject), "all.png"),
 #        plot = last_plot(), path = "[file path here]")
 ```
 
@@ -1033,6 +1034,135 @@ bootstrap_data %<>%
   )
 ```
 
+## Prediction plots (N=1) *with CI labels*
+
+Add bootstrapped median and CI to data frame (dummy method; used for now :) ).
+```{r}
+data_CI_tmp <- data
+data_CI = data_CI_tmp %<>%
+  
+  filter(subject == 1, condition == "Full", probe_index == "top") %>%
+  
+  mutate(
+    bootstrap_lower = CI[CI$subject == 1 & CI$condition == "Full" & CI$probe_index == "top", ]$lower,
+    bootstrap_median = CI[CI$subject == 1 & CI$condition == "Full" & CI$probe_index == "top", ]$median_alpha,
+    bootstrap_upper = CI[CI$subject == 1 & CI$condition == "Full" & CI$probe_index == "top", ]$upper
+  )
+
+for (i in unique(data$subject)) {
+  for (j in unique(data$condition)) {
+    for (k in unique(data$probe_index)) {
+      
+      if (i == 1 & j == "Full" & k == "top") {
+
+      } else {
+        # print(paste(i, paste(j, k))) # DEBUG
+        
+        data_CI_tmp <- data
+        
+        tmp = data_CI_tmp %<>%
+          filter(subject == i, condition == j, probe_index == k) %>%
+          mutate(
+            bootstrap_lower = CI[CI$subject == i & CI$condition == j & CI$probe_index == k, ]$lower,
+            bootstrap_median = CI[CI$subject == i & CI$condition == j & CI$probe_index == k, ]$median_alpha,
+            bootstrap_upper = CI[CI$subject == i & CI$condition == j & CI$probe_index == k, ]$upper
+          )
+        
+        data_CI = bind_rows(data_CI, tmp)
+      }
+      
+    }
+    
+  }
+  
+}
+
+data_CI
+```
+
+
+```{r fig.height=6, fig.width=15}
+
+data_CI %>%
+  
+  rename(
+    Probe = `probe_index`,
+    Flow = `condition`
+    
+  ) %>%
+  
+  filter(subject == select_subject) %>%
+  
+  # group_by(condition, probe_index) %>%
+  ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
+  
+  geom_abline() + # identity line plotted *first*
+  
+  geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain"), linetype = "solid", alpha = 2, se = FALSE) +
+  
+  geom_point(alpha = .4) +
+
+  # plot calculated gain
+  geom_text(
+    data = ~ .x %>%
+      select(alpha) %>%
+      distinct(),
+    aes(label = paste("Gain:", round(alpha, digits = 2))),
+    x = 0,
+    y = 360,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  # plot CI (bootstrapped data)
+  geom_text(
+    data = ~ .x %>%
+      select(bootstrap_lower, bootstrap_upper) %>%
+      distinct(),
+    aes(label = paste(paste(paste(paste("CI: [", round(bootstrap_lower, digits = 2)), ","), round(bootstrap_upper, digits = 2)), "]")),
+    x = 0,
+    y = 320,
+    hjust = 0,
+    show.legend = FALSE
+  ) +
+  
+  scale_color_manual(
+    name = "Raw data & Gain",
+    breaks = c("data", "best fitting gain"),
+    values = c("grey50", "red"),
+    drop = TRUE
+  ) +
+  
+  # tidy up legend aesthetics
+  # guides(color = guide_legend(override.aes = list(fill = NA, shape = c(19, NA), linetype = c("blank", "solid")))) +
+
+  # plots of 1 subject for each unique condition
+  facet_grid(Probe ~ Flow, labeller = label_both) +
+  
+  # set axis scales
+  scale_y_continuous(breaks = c(0, 90, 180, 270, 360)) +
+  scale_x_continuous(breaks = c(0, 90, 180, 270, 360)) +
+
+  # Add axis labels
+  xlab("Probe Angle (deg)") +    
+  ylab("Actual and Predicted Response (deg)") +
+  
+  # # Add title
+  # ggtitle("Perceived vs. Actual direction of motion", subtitle = paste("Subject", select_subject)) +
+  
+  # Tidy up the appearance
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        aspect.ratio = 1 # makes axes ratio 1:1
+  )
+
+# # save ggplot
+# ggsave(filename = paste(paste("Subject", select_subject), "all.png"),
+#        plot = last_plot(), path = "[file path here]")
+```
+
 ## Scatterplots *with CIs*
 
 Modify row names of CI dataframe.
@@ -1063,6 +1193,11 @@ Same.Opposite %<>%
 Same.Opposite %>%
   
   ggplot(aes(x = Opposite, y = Same, label = row.names)) + # EDIT
+  
+  geom_abline() + # identity line plotted *first*
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  
   geom_point(colour = Same.Opposite$subject, size = 2.5) +
   
   # ADDED
@@ -1077,18 +1212,14 @@ Same.Opposite %>%
   xlim(-0.1, 0.55) +
   ylim(-0.1, 0.55) +
   
-  geom_abline() +
-  geom_hline(yintercept = 0, lty = 2) +
-  geom_vline(xintercept = 0, lty = 2) +
-  
   # geom_smooth(se = FALSE) + # regression line
   
   # Add axis labels
-  xlab("Gain (opposite hemifields)") +    
-  ylab("Gain (same hemifield)") +
+  xlab(TeX("Gain F_{Bottom} P_{Top} or F_{Top} P_{Bottom}")) +    
+  ylab(TeX("Gain F_{Bottom} P_{Bottom} or F_{Top} P_{Top}")) +
   
   # Add title
-  ggtitle("Accuracy of Report based on Optic flow/Probe Location") +
+  ggtitle("Relative Strength of Flow Parsing for Same vs. Opposite") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1096,7 +1227,8 @@ Same.Opposite %>%
         text = element_text(size = 12),
         legend.text = element_text(size = 10),
         legend.position = "none",
-        aspect.ratio = 1 # ADDED
+        aspect.ratio = 1, # ADDED
+        # plot.margin=grid::unit(c(0,0,0,0), "mm")
   )
 
 # # save ggplot
@@ -1126,6 +1258,9 @@ top.bottom %<>%
 top.bottom %>%
 
   ggplot(aes(x = FB, y = FT, label = subject)) +
+  
+  geom_abline() + # identity line plotted *first*
+  
   geom_point(colour = top.bottom$subject, size = 3) +
   
   # ADDED
@@ -1138,13 +1273,11 @@ top.bottom %>%
   xlim(0.10, 0.48) +
   ylim(0.10, 0.48) +
   
-  geom_abline() +
-  
   # geom_smooth(method = lm, se = FALSE) + # regression line
   
   # Add axis labels
-  xlab("Gain (probe bottom, optic flow full)") +    
-  ylab("Gain (probe top, optic flow full)") +
+  xlab(TeX("Gain F_{Full} P_{Bottom}")) +    
+  ylab(TeX("Gain F_{Full} P_{Top}")) +
   
   # Add title
   ggtitle("Relative Strength of Flow Parsing between Vertical Hemifields") +
@@ -1307,6 +1440,11 @@ Opposite %<>%
 Opposite %>%
   
   ggplot(aes(x = Bottom_top, y = Top_bottom, label = subject)) +
+  
+  geom_abline() + # identity line plotted *first*
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  
   geom_point(colour = Opposite$subject, size = 3) +
   
   # ADDED
@@ -1321,18 +1459,14 @@ Opposite %>%
   xlim(-0.1, 0.2) +
   ylim(-0.1, 0.2) +
   
-  geom_abline() +
-  geom_hline(yintercept = 0, lty = 2) +
-  geom_vline(xintercept = 0, lty = 2) +
-  
   # geom_smooth(se = FALSE) + # regression line
   
   # Add axis labels
-  xlab("Gain (probe bottom, optic flow top)") +    
-  ylab("Gain (probe top, optic flow bottom)") +
+  xlab(TeX("Gain F_{Top} P_{Bottom}")) +    
+  ylab(TeX("Gain F_{Bottom} P_{Top}")) +
   
   # Add title
-  ggtitle("Accuracy of Report for Opposite Flow/probe Locations") +
+  ggtitle("Relative Strength of Flow Parsing for Opposite Conditions") +
   
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1466,6 +1600,11 @@ Local %<>%
 Local %>%
 
   ggplot(aes(x = Local_bottom, y = Local_top, label = subject)) +
+    
+  geom_abline() + # identity line plotted *first*
+  # geom_hline(yintercept = 0, lty = 2) +
+  # geom_vline(xintercept = 0, lty = 2) +
+  
   geom_point(colour = Local$subject, size = 2) +
   
   # ADDED
@@ -1477,12 +1616,8 @@ Local %>%
   geom_errorbarh(aes(xmin = local_data[local_data$local_effect == "bottom" , ]$lower,
                      xmax = local_data[local_data$local_effect == "bottom" , ]$upper)) +
 
-  xlim(0, 0.46) +
-  ylim(0, 0.46) +
-  
-  geom_abline() +
-  # geom_hline(yintercept = 0, lty = 2) +
-  # geom_vline(xintercept = 0, lty = 2) +
+  xlim(-0.05, 0.46) +
+  ylim(-0.05, 0.46) +
   
   # geom_smooth(se = FALSE) + # regression line
 
@@ -1491,7 +1626,7 @@ Local %>%
   ylab("Gain local top") +
 
   # Add title
-  ggtitle("Strength Local Mechanisms in Vertical Hemifields") +
+  ggtitle("Relative Strength Local Effects in Vertical Hemifields") +
 
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1568,6 +1703,11 @@ Global %<>%
 Global %>%
 
   ggplot(aes(x = Global_bottom, y = Global_top, label = subject)) +
+  
+  geom_abline() + # identity line plotted *first*
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  
   geom_point(colour = Local$subject, size = 2) +
   
   # ADDED
@@ -1582,23 +1722,19 @@ Global %>%
   xlim(-0.13, 0.13) +
   ylim(-0.13, 0.13) +
   
-  geom_abline() +
-  geom_hline(yintercept = 0, lty = 2) +
-  geom_vline(xintercept = 0, lty = 2) +
-  
   # geom_smooth(se = FALSE) + # regression line
 
   # Add axis labels
-  xlab("Gain global bottom") +
-  ylab("Gain global top") +
+  xlab(TeX("Gain global_{self} bottom")) +
+  ylab(TeX("Gain global_{self} top")) +
 
   # Add title
-  ggtitle("Strength of Global Mechanisms in Vertical Hemifields") +
+  ggtitle(TeX("Relative Strength of Global_{self} Effects in Vertical Hemifields")) +
 
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        text = element_text(size = 12),
+        text = element_text(size = 11.5),
         legend.text = element_text(size = 10),
         legend.position = "none",
         aspect.ratio = 1 # ADDED
@@ -1686,6 +1822,11 @@ Global %<>%
 Global %>%
 
   ggplot(aes(x = Global_bottom, y = Global_top, label = subject)) +
+  
+  geom_abline() + # identity line plotted *first*
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  
   geom_point(colour = Local$subject, size = 2) +
   
   # ADDED
@@ -1700,18 +1841,14 @@ Global %>%
   xlim(-0.07, 0.26) +
   ylim(-0.07, 0.26) +
   
-  geom_abline() +
-  geom_hline(yintercept = 0, lty = 2) +
-  geom_vline(xintercept = 0, lty = 2) +
-  
   # geom_smooth(se = FALSE) + # regression line
 
   # Add axis labels
-  xlab("Gain global bottom") +
-  ylab("Gain global top") +
+  xlab(TeX("Gain global_{obj} bottom")) +
+  ylab(TeX("Gain global_{obj} top")) +
 
   # Add title
-  ggtitle("Strength of Global Mechanisms in Vertical Hemifields") +
+  ggtitle(TeX("Relative Strength of Global_{obj} Effects in Vertical Hemifields")) +
 
   # Tidy up the appearance
   theme(panel.grid.major = element_blank(),
@@ -1746,6 +1883,11 @@ Control %<>%
 Control %>%
   
   ggplot(aes(x = Control.bottom, y = Control.top, label = subject)) +
+  
+  geom_abline() + # identity line plotted *first*
+  geom_hline(yintercept = 0, lty = 2) +
+  geom_vline(xintercept = 0, lty = 2) +
+  
   geom_point(colour = Control$subject, size = 2) +
     
   # ADDED
@@ -1760,15 +1902,11 @@ Control %>%
   xlim(-0.2, 0.09) +
   ylim(-0.2, 0.09) +
   
-  geom_abline() +
-  geom_hline(yintercept = 0, lty = 2) +
-  geom_vline(xintercept = 0, lty = 2) +
-  
   # geom_smooth(se = FALSE) + # regression line
   
   # Add axis labels
-  xlab("Gain (probe bottom, no optic flow)") +    
-  ylab("Gain (probe top, no optic flow)") +
+  xlab(TeX("Gain F_{Control} P_{Bottom}")) +    
+  ylab(TeX("Gain F_{Control} P_{Top}")) +
   
   # Add title
   ggtitle("Relative Strength of Flow Parsing between Vertical Hemifields") +
@@ -1994,7 +2132,8 @@ data %>%
   # group_by(condition, probe_index) %>%
   ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
   
-  geom_point(alpha = .4) +
+  geom_abline() + # identity line plotted *first*
+  
   geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain")) +
   
   geom_point(aes(y = 
@@ -2013,8 +2152,8 @@ data %>%
                       flow.y,
                       alpha = 1), colour = "gain = 1")) +
 
-  geom_abline() +
-
+  geom_point(alpha = .4) + # raw data points plotted *last*
+  
   geom_text(
     data = ~ .x %>%
       select(alpha) %>%
@@ -2064,7 +2203,7 @@ data %>%
 #        plot = last_plot(), path = "[file path here]")
 ```
 
-## Prediction plots (N=1) - raw data + 4 gains
+## Prediction plots (N=1) - raw data + multiple gains
 ```{r}
 data %>%
 
@@ -2074,7 +2213,7 @@ data %>%
   ggplot(aes(x = probe_angle, y = abs_tilt, color = "data")) +
   
   geom_point(alpha = .4) +
-  geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain")) +
+  geom_point(aes(y = predicted_absolute_tilt, colour = "best fitting gain"), size = 0.7) +
   
   geom_point(aes(y = 
                     predicted_absolute_tilt(
@@ -2082,7 +2221,7 @@ data %>%
                       probe.y,
                       flow.x,
                       flow.y,
-                      alpha = 0), colour = "gain = 0")) +
+                      alpha = 0), colour = "gain = 0"), size = 0.7) +
   
   geom_point(aes(y = 
                     predicted_absolute_tilt(
@@ -2090,7 +2229,32 @@ data %>%
                       probe.y,
                       flow.x,
                       flow.y,
-                      alpha = 1), colour = "gain = 1")) +
+                      alpha = 1), colour = "gain = 1"), size = 0.7) +
+
+    
+  geom_point(aes(y = 
+                   predicted_absolute_tilt(
+                     probe.x,
+                     probe.y,
+                     flow.x,
+                     flow.y,
+                     alpha = 0.2), colour = "gain = 0.2"), size = 0.7) +
+  
+  geom_point(aes(y = 
+                   predicted_absolute_tilt(
+                     probe.x,
+                     probe.y,
+                     flow.x,
+                     flow.y,
+                     alpha = 0.5), colour = "gain = 0.5"), size = 0.7) +
+  
+  geom_point(aes(y = 
+                   predicted_absolute_tilt(
+                     probe.x,
+                     probe.y,
+                     flow.x,
+                     flow.y,
+                     alpha = 0.6), colour = "gain = 0.6"), size = 0.7) +
 
   geom_point(aes(y = 
                    predicted_absolute_tilt(
@@ -2098,9 +2262,7 @@ data %>%
                      probe.y,
                      flow.x,
                      flow.y,
-                     alpha = 0.6), colour = "gain = 0.6")) +
-  
-  geom_abline() +
+                     alpha = 0.8), colour = "gain = 0.8"), size = 0.7) +
 
   geom_text(
     data = ~ .x %>%
@@ -2115,8 +2277,8 @@ data %>%
   
   scale_color_manual(
     name = "Raw data & Gain",
-    breaks = c("data", "best fitting gain", "gain = 0", "gain = 1", "gain = 0.6"),
-    values = c("grey50", "red", "skyblue2", "green2", "orange1"),
+    breaks = c("data", "best fitting gain", "gain = 0", "gain = 1", "gain = 0.2", "gain = 0.5", "gain = 0.6", "gain = 0.8"),
+    values = c("grey50", "red", "skyblue2", "green2", "hotpink1", "darkorchid3", "orange1", "sienna3"),
     drop = TRUE
   ) +
   
