@@ -1,4 +1,4 @@
-# HaefnerDeAngelisSpring2021
+# Dynamic Corrections of Object Motion Under the Influence of Self Motion
 
 Vision is central to our ability to navigate the world. A problem of particular importance is how our brain estimates object motion during self-movement. To address this question, we test the flow parsing hypothesis, i.e., the brain uses global patterns of optic flow on the retina to infer self-motion, then subtracts the inferred self-motion from object motion to give rise to our perception of object motion in the world. This process is referred to as flow parsing. 
 
